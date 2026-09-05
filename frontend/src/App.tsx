@@ -10,7 +10,9 @@ import {
   ChevronRight,
   ShieldAlert,
   Flame,
-  Activity
+  Activity,
+  Edit2,
+  Trash2
 } from 'lucide-react';
 import { Quote, Watchlist, SearchResult, CatchUpSummary, MeaningfulAnomaly } from './types';
 import {
@@ -21,7 +23,9 @@ import {
   searchSymbols,
   fetchQuotesSnapshot,
   fetchCatchUpSummary,
-  triggerManualSync
+  triggerManualSync,
+  renameWatchlist,
+  deleteWatchlist
 } from './services/api';
 import { wsClient } from './services/websocket';
 import { saveSessionSnapshot } from './services/sessionTracker';
@@ -51,6 +55,14 @@ export const App: React.FC = () => {
   const [chartQuote, setChartQuote] = useState<Quote | null>(null);
   const [orderState, setOrderState] = useState<{ quote: Quote; side: 'BUY' | 'SELL' } | null>(null);
   const [isNewWatchlistModal, setIsNewWatchlistModal] = useState(false);
+
+  // Rename & Delete Watchlist Modals
+  const [isRenameModal, setIsRenameModal] = useState(false);
+  const [watchlistToRename, setWatchlistToRename] = useState<Watchlist | null>(null);
+  const [renameTitle, setRenameTitle] = useState('');
+  const [isDeleteModal, setIsDeleteModal] = useState(false);
+  const [watchlistToDelete, setWatchlistToDelete] = useState<Watchlist | null>(null);
+
   const [newWatchlistTitle, setNewWatchlistTitle] = useState('');
 
   // Live anomaly alerts
@@ -206,6 +218,47 @@ export const App: React.FC = () => {
       const updated = await fetchWatchlists();
       setWatchlists(updated);
     }
+  };
+
+
+  const handleRenameWatchlist = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!watchlistToRename || !renameTitle.trim()) return;
+    const ok = await renameWatchlist(watchlistToRename.id, renameTitle.trim());
+    if (ok) {
+      const updated = await fetchWatchlists();
+      setWatchlists(updated);
+      setIsRenameModal(false);
+      setWatchlistToRename(null);
+      setRenameTitle('');
+    }
+  };
+
+  const handleDeleteWatchlist = async () => {
+    if (!watchlistToDelete) return;
+    const ok = await deleteWatchlist(watchlistToDelete.id);
+    if (ok) {
+      const updated = await fetchWatchlists();
+      setWatchlists(updated);
+      if (activeTabId === watchlistToDelete.id) {
+        setActiveTabId(updated.length > 0 ? updated[0].id : 'wl_nifty_core');
+      }
+      setIsDeleteModal(false);
+      setWatchlistToDelete(null);
+    }
+  };
+
+  const openRenameModal = (wl: Watchlist, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setWatchlistToRename(wl);
+    setRenameTitle(wl.title);
+    setIsRenameModal(true);
+  };
+
+  const openDeleteModal = (wl: Watchlist, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setWatchlistToDelete(wl);
+    setIsDeleteModal(true);
   };
 
   const handleCreateWatchlist = async (e: React.FormEvent) => {
@@ -403,13 +456,15 @@ export const App: React.FC = () => {
         justifyContent: 'space-between',
         marginBottom: '14px',
         borderBottom: '1px solid var(--border-color)',
-        paddingBottom: '8px'
+        paddingBottom: '8px',
+        gap: '12px',
+        flexWrap: 'wrap'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', overflowX: 'auto' }}>
           {watchlists.map((wl) => {
             const isActive = wl.id === activeTabId;
             return (
-              <button
+              <div
                 key={wl.id}
                 onClick={() => {
                   setActiveTabId(wl.id);
@@ -421,20 +476,21 @@ export const App: React.FC = () => {
                   border: isActive ? '1px solid var(--border-color)' : '1px solid transparent',
                   borderBottom: isActive ? '2px solid var(--color-green)' : 'none',
                   borderRadius: 'var(--radius-sm) var(--radius-sm) 0 0',
-                  padding: '8px 16px',
+                  padding: '8px 14px',
                   fontWeight: 600,
                   fontSize: '13px',
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '6px'
+                  gap: '6px',
+                  transition: 'all 0.15s'
                 }}
               >
                 <span>{wl.title}</span>
                 <span style={{
                   fontSize: '11px',
-                  background: 'var(--bg-secondary)',
-                  color: 'var(--text-muted)',
+                  background: 'var(--bg-secondary)' ,
+                  color: 'var(--text-muted)' ,
                   padding: '1px 6px',
                   borderRadius: '10px'
                 }} className="num-tabular">
@@ -444,7 +500,43 @@ export const App: React.FC = () => {
                     ? (Object.values(quotesMap).length > 0 ? Math.min(Object.values(quotesMap).length, 10) : (wl.items ? wl.items.length : 3))
                     : (wl.items ? wl.items.length : 0)}
                 </span>
-              </button>
+
+                {/* Inline Quick Action for Custom Watchlists */}
+                {!wl.isSystem && (
+                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', marginLeft: '4px' }}>
+                    <span
+                      onClick={(e) => openRenameModal(wl, e)}
+                      title="Rename Watchlist"
+                      style={{
+                        padding: '2px 4px',
+                        borderRadius: '3px',
+                        color: 'var(--text-muted)',
+                        fontSize: '11px',
+                        cursor: 'pointer'
+                      }}
+                      onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.color = 'var(--text-primary)')}
+                      onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.color = 'var(--text-muted)')}
+                    >
+                      <Edit2 size={11} />
+                    </span>
+                    <span
+                      onClick={(e) => openDeleteModal(wl, e)}
+                      title="Delete Watchlist"
+                      style={{
+                        padding: '2px 4px',
+                        borderRadius: '3px',
+                        color: 'var(--text-muted)',
+                        fontSize: '11px',
+                        cursor: 'pointer'
+                      }}
+                      onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.color = 'var(--color-red)')}
+                      onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.color = 'var(--text-muted)')}
+                    >
+                      <Trash2 size={11} />
+                    </span>
+                  </div>
+                )}
+              </div>
             );
           })}
 
@@ -468,6 +560,50 @@ export const App: React.FC = () => {
             <Plus size={13} /> New Watchlist
           </button>
         </div>
+
+        {/* Action Controls for Active Custom Watchlist */}
+        {activeWatchlist && !activeWatchlist.isSystem && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <button
+              onClick={() => openRenameModal(activeWatchlist)}
+              title="Rename active watchlist"
+              style={{
+                background: 'var(--bg-card)',
+                border: '1px solid var(--border-color)',
+                color: 'var(--text-secondary)',
+                padding: '5px 10px',
+                borderRadius: 'var(--radius-sm)',
+                fontSize: '12px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px'
+              }}
+            >
+              <Edit2 size={12} /> Rename
+            </button>
+            <button
+              onClick={() => openDeleteModal(activeWatchlist)}
+              title="Delete active watchlist"
+              style={{
+                background: 'rgba(235, 91, 60, 0.1)',
+                border: '1px solid rgba(235, 91, 60, 0.3)',
+                color: 'var(--color-red)',
+                padding: '5px 10px',
+                borderRadius: 'var(--radius-sm)',
+                fontSize: '12px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px'
+              }}
+            >
+              <Trash2 size={12} /> Delete
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Main Watchlist Grid Table */}
@@ -496,6 +632,110 @@ export const App: React.FC = () => {
           initialSide={orderState.side}
           onClose={() => setOrderState(null)}
         />
+      )}
+
+      
+      {/* Rename Watchlist Modal */}
+      {isRenameModal && watchlistToRename && (
+        <div className="modal-overlay" onClick={() => setIsRenameModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ width: '380px', padding: '20px' }}>
+            <h3 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '12px' }}>Rename Watchlist</h3>
+            <form onSubmit={handleRenameWatchlist}>
+              <input
+                type="text"
+                placeholder="New Watchlist Name..."
+                value={renameTitle}
+                onChange={(e) => setRenameTitle(e.target.value)}
+                autoFocus
+                style={{
+                  width: '100%',
+                  background: 'var(--bg-secondary)',
+                  border: '1px solid var(--border-color)',
+                  color: 'var(--text-primary)',
+                  padding: '8px 12px',
+                  borderRadius: 'var(--radius-sm)',
+                  fontSize: '14px',
+                  marginBottom: '16px'
+                }}
+              />
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+                <button
+                  type="button"
+                  onClick={() => setIsRenameModal(false)}
+                  style={{
+                    background: 'transparent',
+                    border: '1px solid var(--border-color)',
+                    color: 'var(--text-secondary)',
+                    padding: '6px 12px',
+                    borderRadius: 'var(--radius-sm)',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  style={{
+                    background: 'var(--color-green)',
+                    border: 'none',
+                    color: '#fff',
+                    padding: '6px 14px',
+                    borderRadius: 'var(--radius-sm)',
+                    fontWeight: 600,
+                    cursor: 'pointer'
+                  }}
+                >
+                  Save Changes
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Watchlist Confirmation Modal */}
+      {isDeleteModal && watchlistToDelete && (
+        <div className="modal-overlay" onClick={() => setIsDeleteModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ width: '400px', padding: '20px' }}>
+            <h3 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '8px', color: 'var(--color-red)' }}>
+              Delete Watchlist
+            </h3>
+            <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '18px' }}>
+              Are you sure you want to delete <strong>"{watchlistToDelete.title}"</strong>? All symbols tracked in this watchlist will be removed.
+            </p>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+              <button
+                type="button"
+                onClick={() => setIsDeleteModal(false)}
+                style={{
+                  background: 'transparent',
+                  border: '1px solid var(--border-color)',
+                  color: 'var(--text-secondary)',
+                  padding: '6px 12px',
+                  borderRadius: 'var(--radius-sm)',
+                  cursor: 'pointer'
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteWatchlist}
+                style={{
+                  background: 'var(--color-red)',
+                  border: 'none',
+                  color: '#fff',
+                  padding: '6px 14px',
+                  borderRadius: 'var(--radius-sm)',
+                  fontWeight: 600,
+                  cursor: 'pointer'
+                }}
+              >
+                Delete Watchlist
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Create Watchlist Modal */}

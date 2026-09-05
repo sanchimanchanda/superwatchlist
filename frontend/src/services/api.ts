@@ -14,6 +14,33 @@ export async function fetchWatchlists(userId = 'default_user'): Promise<Watchlis
   }
 }
 
+
+export async function renameWatchlist(watchlistId: string, title: string): Promise<boolean> {
+  try {
+    const res = await fetch(`${API_BASE}/watchlists/${watchlistId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title })
+    });
+    return res.ok;
+  } catch (err) {
+    console.error("renameWatchlist error:", err);
+    return false;
+  }
+}
+
+export async function deleteWatchlist(watchlistId: string): Promise<boolean> {
+  try {
+    const res = await fetch(`${API_BASE}/watchlists/${watchlistId}`, {
+      method: "DELETE"
+    });
+    return res.ok;
+  } catch (err) {
+    console.error("deleteWatchlist error:", err);
+    return false;
+  }
+}
+
 export async function createWatchlist(title: string, userId = 'default_user'): Promise<Watchlist | null> {
   try {
     const res = await fetch(`${API_BASE}/watchlists?userId=${userId}`, {

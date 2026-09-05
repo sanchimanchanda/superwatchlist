@@ -311,6 +311,33 @@ async def add_symbol_to_watchlist_endpoint(watchlist_id: str, req: AddSymbolRequ
     wl["updatedAt"] = now
     return item
 
+
+class UpdateWatchlistRequest(BaseModel):
+    title: str
+
+@app.put("/api/v1/watchlists/{watchlist_id}")
+async def rename_watchlist_endpoint(watchlist_id: str, req: UpdateWatchlistRequest):
+    wl = mock_watchlists.get(watchlist_id)
+    if not wl:
+        return {"error": "Watchlist not found"}
+    if wl.get("isSystem"):
+        return {"error": "System watchlists cannot be renamed"}
+    
+    wl["title"] = req.title.strip()
+    wl["updatedAt"] = int(time.time() * 1000)
+    return wl
+
+@app.delete("/api/v1/watchlists/{watchlist_id}")
+async def delete_watchlist_endpoint(watchlist_id: str):
+    wl = mock_watchlists.get(watchlist_id)
+    if not wl:
+        return {"error": "Watchlist not found"}
+    if wl.get("isSystem"):
+        return {"error": "System watchlists cannot be deleted"}
+    
+    del mock_watchlists[watchlist_id]
+    return {"status": "deleted", "id": watchlist_id}
+
 @app.delete("/api/v1/watchlists/{watchlist_id}/symbols/{symbol}")
 async def remove_symbol_from_watchlist_endpoint(watchlist_id: str, symbol: str):
     wl = mock_watchlists.get(watchlist_id)
