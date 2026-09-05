@@ -9,7 +9,7 @@ COPY backend/gateway/go.mod ./
 # Note: if go.sum exists, it can be copied; otherwise go mod tidy / download
 COPY backend/gateway/ ./
 
-RUN go mod download
+RUN go mod tidy
 RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o /gateway .
 
 # Final Runner Stage
