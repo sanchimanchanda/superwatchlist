@@ -1,7 +1,7 @@
 # Project Progress & Roadmap
 
 ## 📌 Project Overview
-- **Project Name:** Ronadhona
+- **Project Name:** Growly
 - **Status:** Initial Setup & Scaffolding
 - **Last Updated:** 2026-09-05
 

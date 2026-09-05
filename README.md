@@ -1,4 +1,4 @@
-# Smart Market Watchlist (Groww Code 2026 Hackathon)
+# Growly — Growly (Groww Code 2026 Hackathon)
 
 > **Institutional-Grade Real-Time Stock Watchlist & Market Attention Engine**  
 > Built for the *Code, by Groww (2026)* hackathon sprint by a Financial Markets Product Manager and Senior FinTech Full-Stack Architect (10+ years experience).

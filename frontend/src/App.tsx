@@ -252,7 +252,7 @@ export const App: React.FC = () => {
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <h1 style={{ fontSize: '20px', fontWeight: 800, letterSpacing: '-0.02em' }}>
-                Smart Market Watchlist
+                Growly
               </h1>
               <span className="badge badge-purple">Groww Code 2026</span>
             </div>
