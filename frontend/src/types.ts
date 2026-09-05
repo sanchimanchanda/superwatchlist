@@ -93,3 +93,24 @@ export interface MarketDepth {
   spread: number;
   timestamp: number;
 }
+
+
+export interface Position {
+  symbol: string;
+  name: string;
+  quantity: number;
+  avgBuyPrice: number;
+  totalInvested: number;
+}
+
+export interface ExecutedOrder {
+  id: string;
+  symbol: string;
+  name: string;
+  side: "BUY" | "SELL";
+  orderType: "MARKET" | "LIMIT";
+  quantity: number;
+  price: number;
+  totalAmount: number;
+  timestamp: number;
+}

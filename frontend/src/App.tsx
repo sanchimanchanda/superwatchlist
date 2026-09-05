@@ -2,19 +2,14 @@ import React, { useState, useEffect, useMemo } from 'react';
 import {
   Search,
   Plus,
-  TrendingUp,
-  Layers,
-  Sparkles,
-  Bell,
-  Check,
-  ChevronRight,
-  ShieldAlert,
   Flame,
   Activity,
   Edit2,
-  Trash2
+  Trash2,
+  Wallet,
+  Briefcase
 } from 'lucide-react';
-import { Quote, Watchlist, SearchResult, CatchUpSummary, MeaningfulAnomaly } from './types';
+import { Quote, Watchlist, SearchResult, CatchUpSummary, MeaningfulAnomaly, Position, ExecutedOrder } from './types';
 import {
   fetchWatchlists,
   createWatchlist,
@@ -35,6 +30,7 @@ import { WatchlistTable } from './components/WatchlistTable';
 import { MarketDepthModal } from './components/MarketDepthModal';
 import { QuickOrderModal } from './components/QuickOrderModal';
 import { ChartDrawer } from './components/ChartDrawer';
+import { PositionsModal } from './components/PositionsModal';
 
 export const App: React.FC = () => {
   const [watchlists, setWatchlists] = useState<Watchlist[]>([]);
@@ -44,6 +40,167 @@ export const App: React.FC = () => {
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
   const [catchUpSummary, setCatchUpSummary] = useState<CatchUpSummary | null>(null);
   const [isFilterActiveMovers, setIsFilterActiveMovers] = useState<boolean>(false);
+
+  // Paper Trading & Portfolio Wallet State
+  const [funds, setFunds] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem('growly_funds');
+      return saved ? parseFloat(saved) : 1000000; // Default ₹10,00,000
+    } catch {
+      return 1000000;
+    }
+  });
+
+  const [positions, setPositions] = useState<Position[]>(() => {
+    try {
+      const saved = localStorage.getItem('growly_positions');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const [orderHistory, setOrderHistory] = useState<ExecutedOrder[]>(() => {
+    try {
+      const saved = localStorage.getItem('growly_orders');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const [isPositionsModal, setIsPositionsModal] = useState<boolean>(false);
+
+  // Compute live portfolio metrics
+  const totalInvested = useMemo(() => {
+    return positions.reduce((acc, p) => acc + p.totalInvested, 0);
+  }, [positions]);
+
+  const currentPortfolioValue = useMemo(() => {
+    return positions.reduce((acc, p) => {
+      const q = quotesMap[p.symbol] || quotesMap[p.symbol.toUpperCase()];
+      const ltp = q ? q.ltp : p.avgBuyPrice;
+      return acc + p.quantity * ltp;
+    }, 0);
+  }, [positions, quotesMap]);
+
+  const totalPnL = currentPortfolioValue - totalInvested;
+  const totalPnLPct = totalInvested > 0 ? (totalPnL / totalInvested) * 100 : 0;
+
+  // Execute Buy / Sell Trade Handler
+  const handleExecuteOrder = (order: {
+    symbol: string;
+    name: string;
+    side: 'BUY' | 'SELL';
+    orderType: 'MARKET' | 'LIMIT';
+    quantity: number;
+    price: number;
+    totalAmount: number;
+  }) => {
+    const executedAt = Date.now();
+    const newOrder: ExecutedOrder = {
+      id: `ord_${executedAt}`,
+      symbol: order.symbol,
+      name: order.name,
+      side: order.side,
+      orderType: order.orderType,
+      quantity: order.quantity,
+      price: order.price,
+      totalAmount: order.totalAmount,
+      timestamp: executedAt
+    };
+
+    if (order.side === 'BUY') {
+      // 1. Deduct funds
+      setFunds((prev) => {
+        const next = Math.max(0, prev - order.totalAmount);
+        localStorage.setItem('growly_funds', next.toString());
+        return next;
+      });
+
+      // 2. Add or update position
+      setPositions((prev) => {
+        const existingIdx = prev.findIndex((p) => p.symbol === order.symbol);
+        let updated: Position[];
+        if (existingIdx >= 0) {
+          const existing = prev[existingIdx];
+          const newQty = existing.quantity + order.quantity;
+          const newTotalInvested = existing.totalInvested + order.totalAmount;
+          const newAvgPrice = newTotalInvested / newQty;
+          updated = [...prev];
+          updated[existingIdx] = {
+            ...existing,
+            quantity: newQty,
+            avgBuyPrice: newAvgPrice,
+            totalInvested: newTotalInvested
+          };
+        } else {
+          updated = [
+            ...prev,
+            {
+              symbol: order.symbol,
+              name: order.name,
+              quantity: order.quantity,
+              avgBuyPrice: order.price,
+              totalInvested: order.totalAmount
+            }
+          ];
+        }
+        localStorage.setItem('growly_positions', JSON.stringify(updated));
+        return updated;
+      });
+    } else {
+      // SELL Order
+      // 1. Add funds
+      setFunds((prev) => {
+        const next = prev + order.totalAmount;
+        localStorage.setItem('growly_funds', next.toString());
+        return next;
+      });
+
+      // 2. Reduce position
+      setPositions((prev) => {
+        const existingIdx = prev.findIndex((p) => p.symbol === order.symbol);
+        let updated: Position[];
+        if (existingIdx >= 0) {
+          const existing = prev[existingIdx];
+          const remainingQty = existing.quantity - order.quantity;
+          if (remainingQty <= 0) {
+            updated = prev.filter((p) => p.symbol !== order.symbol);
+          } else {
+            const fraction = remainingQty / existing.quantity;
+            updated = [...prev];
+            updated[existingIdx] = {
+              ...existing,
+              quantity: remainingQty,
+              totalInvested: existing.totalInvested * fraction
+            };
+          }
+        } else {
+          updated = prev;
+        }
+        localStorage.setItem('growly_positions', JSON.stringify(updated));
+        return updated;
+      });
+    }
+
+    // 3. Append order history
+    setOrderHistory((prev) => {
+      const updated = [newOrder, ...prev];
+      localStorage.setItem('growly_orders', JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  const handleResetBalance = () => {
+    setFunds(1000000);
+    setPositions([]);
+    setOrderHistory([]);
+    localStorage.setItem('growly_funds', '1000000');
+    localStorage.removeItem('growly_positions');
+    localStorage.removeItem('growly_orders');
+    setIsPositionsModal(false);
+  };
 
   // Search & Autocomplete
   const [searchQuery, setSearchQuery] = useState('');
@@ -159,15 +316,12 @@ export const App: React.FC = () => {
 
     // Special Smart Tab: 52W Breakouts
     if (activeTabId === 'wl_smart_breakout') {
-      // Stocks trading within 5% of 52W High
       const breakouts = allQuotes.filter((q) => q.ltp >= q.week52High * 0.95);
       if (breakouts.length > 0) return breakouts;
-      // Fallback to explicit seed items for 52W breakouts
       if (activeWatchlist && activeWatchlist.items.length > 0) {
         const seedItems = activeWatchlist.items.map((i) => quotesMap[i.symbol.toUpperCase()] || quotesMap[i.symbol]).filter(Boolean);
         if (seedItems.length > 0) return seedItems;
       }
-      // Proximity sort fallback
       return [...allQuotes].sort((a, b) => (b.ltp / b.week52High) - (a.ltp / a.week52High)).slice(0, 5);
     }
 
@@ -199,8 +353,8 @@ export const App: React.FC = () => {
   };
 
   const handleAddSymbol = async (symbol: string) => {
-    if (!activeWatchlist || activeWatchlist.isSystem) {
-      alert('Please select a custom watchlist to add symbols.');
+    if (!activeWatchlist) {
+      alert('Please select a watchlist to add symbols.');
       return;
     }
     const ok = await addSymbolToWatchlist(activeWatchlist.id, symbol);
@@ -212,14 +366,13 @@ export const App: React.FC = () => {
   };
 
   const handleRemoveSymbol = async (symbol: string) => {
-    if (!activeWatchlist || activeWatchlist.isSystem) return;
+    if (!activeWatchlist) return;
     const ok = await removeSymbolFromWatchlist(activeWatchlist.id, symbol);
     if (ok) {
       const updated = await fetchWatchlists();
       setWatchlists(updated);
     }
   };
-
 
   const handleRenameWatchlist = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -316,7 +469,7 @@ export const App: React.FC = () => {
         </div>
 
         {/* Global Search Autocomplete Bar */}
-        <div style={{ position: 'relative', width: '380px' }}>
+        <div style={{ position: 'relative', width: '340px' }}>
           <div style={{
             display: 'flex',
             alignItems: 'center',
@@ -329,7 +482,7 @@ export const App: React.FC = () => {
             <Search size={16} color="var(--text-muted)" />
             <input
               type="text"
-              placeholder="Search ticker, company or sector (e.g. RELIANCE, TCS)..."
+              placeholder="Search ticker, company or sector..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               style={{
@@ -379,7 +532,9 @@ export const App: React.FC = () => {
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                       <span style={{ fontWeight: 700, fontSize: '13px' }}>{res.symbol}</span>
-                      <span className="badge badge-blue" style={{ fontSize: '10px' }}>{res.exchange}</span>
+                      <span className="badge badge-blue" style={{ fontSize: '10px', padding: '1px 4px' }}>
+                        {res.exchange}
+                      </span>
                     </div>
                     <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
                       {res.name} • {res.sector}
@@ -408,6 +563,69 @@ export const App: React.FC = () => {
               ))}
             </div>
           )}
+        </div>
+
+        {/* Paper Trading Margin & Positions Hub */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div
+            onClick={() => setIsPositionsModal(true)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '14px',
+              background: 'var(--bg-card)',
+              border: '1px solid var(--border-color)',
+              padding: '6px 14px',
+              borderRadius: 'var(--radius-md)',
+              cursor: 'pointer',
+              transition: 'all 0.15s ease',
+              boxShadow: '0 2px 6px rgba(0,0,0,0.2)'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.borderColor = 'var(--color-blue)';
+              e.currentTarget.style.background = 'var(--bg-hover)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.borderColor = 'var(--border-color)';
+              e.currentTarget.style.background = 'var(--bg-card)';
+            }}
+            title="Click to view Positions & Trade Book"
+          >
+            {/* Funds Available */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Wallet size={15} color="var(--color-green)" />
+              <div>
+                <div style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  Available Margin
+                </div>
+                <div className="num-tabular" style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)' }}>
+                  ₹{funds.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </div>
+              </div>
+            </div>
+
+            <div style={{ width: '1px', height: '24px', background: 'var(--border-color)' }} />
+
+            {/* Live Portfolio P&L */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Briefcase size={15} color={totalPnL >= 0 ? 'var(--color-green)' : 'var(--color-red)'} />
+              <div>
+                <div style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  Portfolio ({positions.length} Open)
+                </div>
+                <div className="num-tabular" style={{
+                  fontSize: '13px',
+                  fontWeight: 700,
+                  color: totalPnL >= 0 ? 'var(--color-green)' : 'var(--color-red)'
+                }}>
+                  {totalPnL >= 0 ? '+' : ''}₹{totalPnL.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  <span style={{ fontSize: '11px', fontWeight: 500, marginLeft: '4px' }}>
+                    ({totalPnLPct >= 0 ? '+' : ''}{totalPnLPct.toFixed(2)}%)
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* 1-Minute Live Sync Widget */}
@@ -489,8 +707,8 @@ export const App: React.FC = () => {
                 <span>{wl.title}</span>
                 <span style={{
                   fontSize: '11px',
-                  background: 'var(--bg-secondary)' ,
-                  color: 'var(--text-muted)' ,
+                  background: 'var(--bg-secondary)',
+                  color: 'var(--text-muted)',
                   padding: '1px 6px',
                   borderRadius: '10px'
                 }} className="num-tabular">
@@ -501,41 +719,43 @@ export const App: React.FC = () => {
                     : (wl.items ? wl.items.length : 0)}
                 </span>
 
-                {/* Inline Quick Action for Custom Watchlists */}
-                {!wl.isSystem && (
-                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', marginLeft: '4px' }}>
-                    <span
-                      onClick={(e) => openRenameModal(wl, e)}
-                      title="Rename Watchlist"
-                      style={{
-                        padding: '2px 4px',
-                        borderRadius: '3px',
-                        color: 'var(--text-muted)',
-                        fontSize: '11px',
-                        cursor: 'pointer'
-                      }}
-                      onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.color = 'var(--text-primary)')}
-                      onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.color = 'var(--text-muted)')}
-                    >
-                      <Edit2 size={11} />
-                    </span>
-                    <span
-                      onClick={(e) => openDeleteModal(wl, e)}
-                      title="Delete Watchlist"
-                      style={{
-                        padding: '2px 4px',
-                        borderRadius: '3px',
-                        color: 'var(--text-muted)',
-                        fontSize: '11px',
-                        cursor: 'pointer'
-                      }}
-                      onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.color = 'var(--color-red)')}
-                      onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.color = 'var(--text-muted)')}
-                    >
-                      <Trash2 size={11} />
-                    </span>
-                  </div>
-                )}
+                {/* Inline Quick Action for ALL Watchlists */}
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', marginLeft: '4px' }}>
+                  <span
+                    onClick={(e) => openRenameModal(wl, e)}
+                    title={`Rename "${wl.title}"`}
+                    style={{
+                      padding: '2px 4px',
+                      borderRadius: '3px',
+                      color: 'var(--text-muted)',
+                      fontSize: '11px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center'
+                    }}
+                    onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.color = 'var(--text-primary)')}
+                    onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.color = 'var(--text-muted)')}
+                  >
+                    <Edit2 size={11} />
+                  </span>
+                  <span
+                    onClick={(e) => openDeleteModal(wl, e)}
+                    title={`Delete "${wl.title}"`}
+                    style={{
+                      padding: '2px 4px',
+                      borderRadius: '3px',
+                      color: 'var(--text-muted)',
+                      fontSize: '11px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center'
+                    }}
+                    onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.color = 'var(--color-red)')}
+                    onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.color = 'var(--text-muted)')}
+                  >
+                    <Trash2 size={11} />
+                  </span>
+                </div>
               </div>
             );
           })}
@@ -561,12 +781,12 @@ export const App: React.FC = () => {
           </button>
         </div>
 
-        {/* Action Controls for Active Custom Watchlist */}
-        {activeWatchlist && !activeWatchlist.isSystem && (
+        {/* Action Controls for Active Watchlist */}
+        {activeWatchlist && (
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <button
               onClick={() => openRenameModal(activeWatchlist)}
-              title="Rename active watchlist"
+              title={`Rename ${activeWatchlist.title}`}
               style={{
                 background: 'var(--bg-card)',
                 border: '1px solid var(--border-color)',
@@ -578,14 +798,17 @@ export const App: React.FC = () => {
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '5px'
+                gap: '5px',
+                transition: 'all 0.15s'
               }}
+              onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.color = 'var(--text-primary)')}
+              onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.color = 'var(--text-secondary)')}
             >
               <Edit2 size={12} /> Rename
             </button>
             <button
               onClick={() => openDeleteModal(activeWatchlist)}
-              title="Delete active watchlist"
+              title={`Delete ${activeWatchlist.title}`}
               style={{
                 background: 'rgba(235, 91, 60, 0.1)',
                 border: '1px solid rgba(235, 91, 60, 0.3)',
@@ -597,8 +820,11 @@ export const App: React.FC = () => {
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '5px'
+                gap: '5px',
+                transition: 'all 0.15s'
               }}
+              onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = 'rgba(235, 91, 60, 0.2)')}
+              onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = 'rgba(235, 91, 60, 0.1)')}
             >
               <Trash2 size={12} /> Delete
             </button>
@@ -613,7 +839,7 @@ export const App: React.FC = () => {
           onOpenDepth={(q) => setDepthQuote(q)}
           onOpenChart={(q) => setChartQuote(q)}
           onOpenOrder={(q, side) => setOrderState({ quote: q, side })}
-          onRemoveSymbol={activeWatchlist && !activeWatchlist.isSystem ? handleRemoveSymbol : undefined}
+          onRemoveSymbol={activeWatchlist ? handleRemoveSymbol : undefined}
         />
       </main>
 
@@ -630,11 +856,31 @@ export const App: React.FC = () => {
         <QuickOrderModal
           quote={orderState.quote}
           initialSide={orderState.side}
+          availableFunds={funds}
+          currentHoldingQty={positions.find((p) => p.symbol === orderState.quote.symbol)?.quantity || 0}
+          onExecuteOrder={handleExecuteOrder}
           onClose={() => setOrderState(null)}
         />
       )}
 
-      
+      {isPositionsModal && (
+        <PositionsModal
+          funds={funds}
+          positions={positions}
+          orderHistory={orderHistory}
+          quotesMap={quotesMap}
+          onExitPosition={(pos) => {
+            const q = quotesMap[pos.symbol] || quotesMap[pos.symbol.toUpperCase()];
+            if (q) {
+              setIsPositionsModal(false);
+              setOrderState({ quote: q, side: 'SELL' });
+            }
+          }}
+          onResetBalance={handleResetBalance}
+          onClose={() => setIsPositionsModal(false)}
+        />
+      )}
+
       {/* Rename Watchlist Modal */}
       {isRenameModal && watchlistToRename && (
         <div className="modal-overlay" onClick={() => setIsRenameModal(false)}>
@@ -798,4 +1044,5 @@ export const App: React.FC = () => {
     </div>
   );
 };
+
 export default App;

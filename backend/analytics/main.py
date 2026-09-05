@@ -218,7 +218,7 @@ mock_watchlists = {
         "id": "wl_smart_active",
         "userId": "default_user",
         "title": "🔥 Most Active Now",
-        "isSystem": True,
+        "isSystem": False,
         "items": [
             {"id": "item_15", "watchlistId": "wl_smart_active", "symbol": "ZOMATO", "orderRank": "0|hzzzzz:", "addedAt": 1725510000000},
             {"id": "item_16", "watchlistId": "wl_smart_active", "symbol": "TATAMOTORS", "orderRank": "0|i00000:", "addedAt": 1725510000000},
@@ -231,7 +231,7 @@ mock_watchlists = {
         "id": "wl_smart_breakout",
         "userId": "default_user",
         "title": "🚀 52W Breakouts",
-        "isSystem": True,
+        "isSystem": False,
         "items": [
             {"id": "item_18", "watchlistId": "wl_smart_breakout", "symbol": "TCS", "orderRank": "0|hzzzzz:", "addedAt": 1725510000000},
             {"id": "item_19", "watchlistId": "wl_smart_breakout", "symbol": "BHARTIARTL", "orderRank": "0|i00000:", "addedAt": 1725510000000}
@@ -320,8 +320,7 @@ async def rename_watchlist_endpoint(watchlist_id: str, req: UpdateWatchlistReque
     wl = mock_watchlists.get(watchlist_id)
     if not wl:
         return {"error": "Watchlist not found"}
-    if wl.get("isSystem"):
-        return {"error": "System watchlists cannot be renamed"}
+
     
     wl["title"] = req.title.strip()
     wl["updatedAt"] = int(time.time() * 1000)
@@ -332,8 +331,7 @@ async def delete_watchlist_endpoint(watchlist_id: str):
     wl = mock_watchlists.get(watchlist_id)
     if not wl:
         return {"error": "Watchlist not found"}
-    if wl.get("isSystem"):
-        return {"error": "System watchlists cannot be deleted"}
+
     
     del mock_watchlists[watchlist_id]
     return {"status": "deleted", "id": watchlist_id}
