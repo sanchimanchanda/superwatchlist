@@ -137,12 +137,26 @@ export const App: React.FC = () => {
 
     // Special Smart Tab: Most Active Now
     if (activeTabId === 'wl_smart_active') {
-      return [...allQuotes].sort((a, b) => b.volume - a.volume).slice(0, 10);
+      const sorted = [...allQuotes].sort((a, b) => b.volume - a.volume).slice(0, 10);
+      if (sorted.length > 0) return sorted;
+      if (activeWatchlist && activeWatchlist.items.length > 0) {
+        return activeWatchlist.items.map((i) => quotesMap[i.symbol.toUpperCase()] || quotesMap[i.symbol]).filter(Boolean);
+      }
+      return [];
     }
 
     // Special Smart Tab: 52W Breakouts
     if (activeTabId === 'wl_smart_breakout') {
-      return allQuotes.filter((q) => q.ltp >= q.week52High * 0.99);
+      // Stocks trading within 5% of 52W High
+      const breakouts = allQuotes.filter((q) => q.ltp >= q.week52High * 0.95);
+      if (breakouts.length > 0) return breakouts;
+      // Fallback to explicit seed items for 52W breakouts
+      if (activeWatchlist && activeWatchlist.items.length > 0) {
+        const seedItems = activeWatchlist.items.map((i) => quotesMap[i.symbol.toUpperCase()] || quotesMap[i.symbol]).filter(Boolean);
+        if (seedItems.length > 0) return seedItems;
+      }
+      // Proximity sort fallback
+      return [...allQuotes].sort((a, b) => (b.ltp / b.week52High) - (a.ltp / a.week52High)).slice(0, 5);
     }
 
     // Special Smart Tab: All Equities
@@ -153,12 +167,13 @@ export const App: React.FC = () => {
     // Standard User Watchlist
     if (!activeWatchlist) return [];
     let list = activeWatchlist.items
-      .map((item) => quotesMap[item.symbol])
+      .map((item) => quotesMap[item.symbol.toUpperCase()] || quotesMap[item.symbol])
       .filter(Boolean);
 
     // Filter movers only if toggle is active
     if (isFilterActiveMovers) {
-      list = list.filter((q) => Math.abs(q.changePct) >= 1.5 || q.ltp >= q.week52High * 0.995);
+      const filtered = list.filter((q) => Math.abs(q.changePct) >= 1.5 || q.ltp >= q.week52High * 0.95);
+      if (filtered.length > 0) return filtered;
     }
 
     return list;
@@ -416,17 +431,19 @@ export const App: React.FC = () => {
                 }}
               >
                 <span>{wl.title}</span>
-                {wl.items && (
-                  <span style={{
-                    fontSize: '11px',
-                    background: 'var(--bg-secondary)',
-                    color: 'var(--text-muted)',
-                    padding: '1px 6px',
-                    borderRadius: '10px'
-                  }} className="num-tabular">
-                    {wl.items.length}
-                  </span>
-                )}
+                <span style={{
+                  fontSize: '11px',
+                  background: 'var(--bg-secondary)',
+                  color: 'var(--text-muted)',
+                  padding: '1px 6px',
+                  borderRadius: '10px'
+                }} className="num-tabular">
+                  {wl.id === 'wl_smart_breakout'
+                    ? (Object.values(quotesMap).filter((q) => q.ltp >= q.week52High * 0.95).length || (wl.items ? wl.items.length : 2))
+                    : wl.id === 'wl_smart_active'
+                    ? (Object.values(quotesMap).length > 0 ? Math.min(Object.values(quotesMap).length, 10) : (wl.items ? wl.items.length : 3))
+                    : (wl.items ? wl.items.length : 0)}
+                </span>
               </button>
             );
           })}
