@@ -231,7 +231,7 @@ const DEFAULT_WATCHLISTS: Watchlist[] = [
   {
     id: 'wl_smart_active',
     userId: 'default_user',
-    title: '🔥 Most Active Now',
+    title: 'Most Active Now',
     isSystem: false,
     items: [
       { id: 'item_15', watchlistId: 'wl_smart_active', symbol: 'ZOMATO', orderRank: '0|hzzzzz:', addedAt: 1725510000000 },
@@ -244,7 +244,7 @@ const DEFAULT_WATCHLISTS: Watchlist[] = [
   {
     id: 'wl_smart_breakout',
     userId: 'default_user',
-    title: '🚀 52W Breakouts',
+    title: '52W Breakouts',
     isSystem: false,
     items: [
       { id: 'item_18', watchlistId: 'wl_smart_breakout', symbol: 'TCS', orderRank: '0|hzzzzz:', addedAt: 1725510000000 },
@@ -443,10 +443,10 @@ export async function fetchCatchUpSummary(userId = 'default_user'): Promise<Catc
     timeAwayMinutes: 90,
     headline: 'Since you last checked (1h 30m ago): 8 stocks gained >1.5%, 3 dropped.',
     bulletPoints: [
-      '⚡ INFY surged +4.83% on strong quarterly revenue guidance.',
-      '🚀 RELIANCE hit a new session high (+1.45%).',
-      '🔥 ZOMATO locked in Upper Circuit limit (+10.16%).',
-      '🔻 ICICIBANK dropped -4.93% on profit booking.'
+      'INFY surged +4.83% on strong quarterly revenue guidance.',
+      'RELIANCE hit a new session high (+1.45%).',
+      'ZOMATO locked in Upper Circuit limit (+10.16%).',
+      'ICICIBANK dropped -4.93% on profit booking.'
     ],
     totalMovedUp: 8,
     totalMovedDown: 3,

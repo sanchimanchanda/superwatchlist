@@ -217,7 +217,7 @@ mock_watchlists = {
     "wl_smart_active": {
         "id": "wl_smart_active",
         "userId": "default_user",
-        "title": "🔥 Most Active Now",
+        "title": "Most Active Now",
         "isSystem": False,
         "items": [
             {"id": "item_15", "watchlistId": "wl_smart_active", "symbol": "ZOMATO", "orderRank": "0|hzzzzz:", "addedAt": 1725510000000},
@@ -230,7 +230,7 @@ mock_watchlists = {
     "wl_smart_breakout": {
         "id": "wl_smart_breakout",
         "userId": "default_user",
-        "title": "🚀 52W Breakouts",
+        "title": "52W Breakouts",
         "isSystem": False,
         "items": [
             {"id": "item_18", "watchlistId": "wl_smart_breakout", "symbol": "TCS", "orderRank": "0|hzzzzz:", "addedAt": 1725510000000},

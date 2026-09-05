@@ -40,23 +40,23 @@ def test_session_catchup():
 
     # 1. Validate Time Away Calculation
     assert summary["timeAwayMinutes"] == 120, f"Expected 120m away, got {summary['timeAwayMinutes']}"
-    print(f"✓ Time-Away Calculation ({summary['timeAwayMinutes']} mins elapsed): PASSED")
+    print(f"[PASS] Time-Away Calculation ({summary['timeAwayMinutes']} mins elapsed): PASSED")
 
     # 2. Validate Movers Breakdown
     assert summary["totalMovedUp"] >= 2, f"Expected >= 2 rallied stocks, got {summary['totalMovedUp']}"
     assert summary["totalMovedDown"] >= 1, f"Expected >= 1 dropped stock, got {summary['totalMovedDown']}"
-    print(f"✓ Gainers/Losers Classification ({summary['totalMovedUp']} up, {summary['totalMovedDown']} down): PASSED")
+    print(f"[PASS] Gainers/Losers Classification ({summary['totalMovedUp']} up, {summary['totalMovedDown']} down): PASSED")
 
     # 3. Validate Natural Language Headline
     assert "Since you last checked" in summary["headline"]
     assert "stocks gained" in summary["headline"]
-    print(f"✓ Natural Language Narrative Summary: \"{summary['headline']}\" (PASSED)")
+    print(f"[PASS] Natural Language Narrative Summary: \"{summary['headline']}\" (PASSED)")
 
     # 4. Validate Bullet Points
     assert len(summary["bulletPoints"]) >= 2, "Missing bullet points"
-    print(f"✓ Actionable Highlights ({len(summary['bulletPoints'])} bullets generated): PASSED")
+    print(f"[PASS] Actionable Highlights ({len(summary['bulletPoints'])} bullets generated): PASSED")
 
-    print("\n🎉 All Session Catch-Up Intelligence tests PASSED!\n")
+    print("\nAll Session Catch-Up Intelligence tests PASSED!\n")
 
 if __name__ == "__main__":
     test_session_catchup()

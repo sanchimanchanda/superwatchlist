@@ -80,7 +80,7 @@ func (s *Store) seedDefaultWatchlists() {
 	wl3 := &Watchlist{
 		ID:        "wl_smart_active",
 		UserID:    "default_user",
-		Title:     "🔥 Most Active Now",
+		Title:     "Most Active Now",
 		IsSystem:  true,
 		CreatedAt: now,
 		UpdatedAt: now,

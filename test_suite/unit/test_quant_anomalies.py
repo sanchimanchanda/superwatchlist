@@ -64,27 +64,27 @@ def test_anomaly_engine():
     tcs_ano = next((a for a in anomalies if a["symbol"] == "TCS"), None)
     assert tcs_ano is not None, "FAILED: TCS 52W breakout not detected"
     assert tcs_ano["type"] == "52W_HIGH_BREAKOUT", f"Expected 52W_HIGH_BREAKOUT, got {tcs_ano['type']}"
-    print(f"✓ 52W High Breakout Detection (TCS, Score: {tcs_ano['attentionScore']}): PASSED")
+    print(f"[PASS] 52W High Breakout Detection (TCS, Score: {tcs_ano['attentionScore']}): PASSED")
 
     # 2. Validate Upper Circuit Lock Detection
     zomato_ano = next((a for a in anomalies if a["symbol"] == "ZOMATO"), None)
     assert zomato_ano is not None, "FAILED: ZOMATO Circuit lock not detected"
     assert zomato_ano["type"] == "CIRCUIT_LOCK_UC", f"Expected CIRCUIT_LOCK_UC, got {zomato_ano['type']}"
     assert zomato_ano["attentionScore"] >= 95.0, f"Circuit lock score should be >= 95, got {zomato_ano['attentionScore']}"
-    print(f"✓ Upper Circuit Lock Detection (ZOMATO, Score: {zomato_ano['attentionScore']}): PASSED")
+    print(f"[PASS] Upper Circuit Lock Detection (ZOMATO, Score: {zomato_ano['attentionScore']}): PASSED")
 
     # 3. Validate Normal Stock Does Not Trigger False Positive
     hdfc_ano = next((a for a in anomalies if a["symbol"] == "HDFCBANK"), None)
     assert hdfc_ano is None, "FAILED: Low volatility stock triggered false anomaly"
-    print("✓ False Positive Filter (HDFCBANK correctly filtered): PASSED")
+    print("[PASS] False Positive Filter (HDFCBANK correctly filtered): PASSED")
 
     # 4. Attention Score Range Test
     for a in anomalies:
         score = a["attentionScore"]
         assert 0.0 <= score <= 100.0, f"Attention score {score} outside [0, 100]"
-    print("✓ Attention Score Bounds ([0, 100] scale): PASSED")
+    print("[PASS] Attention Score Bounds ([0, 100] scale): PASSED")
 
-    print("\n🎉 All Quant Anomaly & Attention Score tests PASSED!\n")
+    print("\nAll Quant Anomaly & Attention Score tests PASSED!\n")
 
 if __name__ == "__main__":
     test_anomaly_engine()

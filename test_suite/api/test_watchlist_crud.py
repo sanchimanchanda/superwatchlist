@@ -23,12 +23,12 @@ def test_watchlist_crud():
         "isSystem": False,
         "items": []
     }
-    print("✓ Create Watchlist Endpoint: PASSED")
+    print("[PASS] Create Watchlist Endpoint: PASSED")
 
     # 2. Rename Watchlist
     watchlists[wl_id]["title"] = "Energy & AI Frontier"
     assert watchlists[wl_id]["title"] == "Energy & AI Frontier"
-    print("✓ Rename Watchlist Endpoint (Updated title): PASSED")
+    print("[PASS] Rename Watchlist Endpoint (Updated title): PASSED")
 
     # 3. Add Symbols
     symbols_to_add = ["RELIANCE", "TCS", "INFY", "NVDA"]
@@ -41,7 +41,7 @@ def test_watchlist_crud():
         watchlists[wl_id]["items"].append(item)
     
     assert len(watchlists[wl_id]["items"]) == 4, "Items count mismatch"
-    print(f"✓ Add Symbols to Watchlist (4 symbols added): PASSED")
+    print(f"[PASS] Add Symbols to Watchlist (4 symbols added): PASSED")
 
     # 4. LexoRank Reordering
     reordered_symbols = ["NVDA", "RELIANCE", "INFY", "TCS"]
@@ -57,19 +57,19 @@ def test_watchlist_crud():
     # Verify order
     final_symbols = [it["symbol"] for it in watchlists[wl_id]["items"]]
     assert final_symbols == reordered_symbols, f"Reorder failed. Expected {reordered_symbols}, got {final_symbols}"
-    print(f"✓ O(1) LexoRank Reordering ({' -> '.join(final_symbols)}): PASSED")
+    print(f"[PASS] O(1) LexoRank Reordering ({' -> '.join(final_symbols)}): PASSED")
 
     # 5. Remove Symbol
     watchlists[wl_id]["items"] = [it for it in watchlists[wl_id]["items"] if it["symbol"] != "INFY"]
     assert len(watchlists[wl_id]["items"]) == 3, "Failed to remove item"
-    print("✓ Remove Symbol from Watchlist: PASSED")
+    print("[PASS] Remove Symbol from Watchlist: PASSED")
 
     # 6. Delete Watchlist
     del watchlists[wl_id]
     assert wl_id not in watchlists
-    print("✓ Delete Watchlist Endpoint: PASSED")
+    print("[PASS] Delete Watchlist Endpoint: PASSED")
 
-    print("\n🎉 All Watchlist CRUD & LexoRank tests PASSED!\n")
+    print("\nAll Watchlist CRUD & LexoRank tests PASSED!\n")
 
 if __name__ == "__main__":
     test_watchlist_crud()

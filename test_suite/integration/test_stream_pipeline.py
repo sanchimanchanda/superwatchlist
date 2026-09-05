@@ -37,7 +37,7 @@ def test_stream_pipeline():
     assert parsed["type"] == "TICK_BATCH", "Type mismatch in tick envelope"
     assert len(parsed["data"]["symbols"]) == 1, "Symbol payload length mismatch"
     assert parsed["data"]["symbols"][0]["symbol"] == "RELIANCE"
-    print("✓ 1-Minute Tick Batch Protocol Serialization: PASSED")
+    print("[PASS] 1-Minute Tick Batch Protocol Serialization: PASSED")
 
     # Validate Anomaly Alert Message Protocol
     anomaly_envelope = {
@@ -57,9 +57,9 @@ def test_stream_pipeline():
 
     assert parsed_ano["type"] == "ANOMALY_ALERT"
     assert parsed_ano["data"]["attentionScore"] == 94.5
-    print("✓ Anomaly Alert Protocol Serialization: PASSED")
+    print("[PASS] Anomaly Alert Protocol Serialization: PASSED")
 
-    print("\n🎉 All WebSocket Stream Message Protocol tests PASSED!\n")
+    print("\nAll WebSocket Stream Message Protocol tests PASSED!\n")
 
 if __name__ == "__main__":
     test_stream_pipeline()

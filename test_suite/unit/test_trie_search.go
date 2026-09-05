@@ -37,7 +37,7 @@ func main() {
 		fmt.Printf("FAILED: Expected RELIANCE for prefix 'rel', got %v\n", res)
 		os.Exit(1)
 	}
-	fmt.Println("✓ Symbol Prefix Match ('rel' -> RELIANCE): PASSED")
+	fmt.Println("[PASS] Symbol Prefix Match ('rel' -> RELIANCE): PASSED")
 
 	// Test 2: Company Name Word Match
 	res2 := t.Search("consultancy", 10)
@@ -45,7 +45,7 @@ func main() {
 		fmt.Printf("FAILED: Expected TCS for keyword 'consultancy', got %v\n", res2)
 		os.Exit(1)
 	}
-	fmt.Println("✓ Company Name Word Match ('consultancy' -> TCS): PASSED")
+	fmt.Println("[PASS] Company Name Word Match ('consultancy' -> TCS): PASSED")
 
 	// Test 3: Multi-Result Search
 	res3 := t.Search("tata", 10)
@@ -53,7 +53,7 @@ func main() {
 		fmt.Printf("FAILED: Expected at least 2 results for 'tata', got %d\n", len(res3))
 		os.Exit(1)
 	}
-	fmt.Printf("✓ Multi-Result Query ('tata' -> %d items found): PASSED\n", len(res3))
+	fmt.Printf("[PASS] Multi-Result Query ('tata' -> %d items found): PASSED\n", len(res3))
 
 	// Test 4: Latency Benchmark under 10,000 queries
 	iterations := 10000
@@ -64,12 +64,12 @@ func main() {
 	elapsed := time.Since(start)
 	avgLatency := float64(elapsed.Microseconds()) / float64(iterations)
 
-	fmt.Printf("✓ Latency Benchmark (%d queries in %v): Avg %.3f µs/lookup (Target: <2000 µs)\n", iterations, elapsed, avgLatency)
+	fmt.Printf("[PASS] Latency Benchmark (%d queries in %v): Avg %.3f µs/lookup (Target: <2000 µs)\n", iterations, elapsed, avgLatency)
 
 	if avgLatency > 2000 {
 		fmt.Println("FAILED: Lookup latency exceeded 2ms threshold!")
 		os.Exit(1)
 	}
 
-	fmt.Println("\n🎉 All In-Memory Prefix Trie Search tests PASSED!\n")
+	fmt.Println("\nAll In-Memory Prefix Trie Search tests PASSED!\n")
 }

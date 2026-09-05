@@ -31,8 +31,8 @@ ON CONFLICT (symbol) DO NOTHING;
 INSERT INTO watchlists (id, user_id, title, is_system, created_at, updated_at) VALUES
 ('wl_nifty_core', 'default_user', 'Nifty 50 Core', false, 1725510000000, 1725510000000),
 ('wl_tech_growth', 'default_user', 'Tech & AI Growth', false, 1725510000000, 1725510000000),
-('wl_smart_active', 'default_user', '🔥 Most Active Now', true, 1725510000000, 1725510000000),
-('wl_smart_breakout', 'default_user', '🚀 52W Breakouts', true, 1725510000000, 1725510000000)
+('wl_smart_active', 'default_user', 'Most Active Now', true, 1725510000000, 1725510000000),
+('wl_smart_breakout', 'default_user', '52W Breakouts', true, 1725510000000, 1725510000000)
 ON CONFLICT (id) DO NOTHING;
 
 -- Seed default watchlist items with LexoRank strings
