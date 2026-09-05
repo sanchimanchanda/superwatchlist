@@ -348,8 +348,24 @@ export const App: React.FC = () => {
   // Actions
   const handleManualSync = async () => {
     setIsSyncing(true);
-    await triggerManualSync();
-    setTimeout(() => setIsSyncing(false), 800);
+    try {
+      await triggerManualSync();
+      const latest = await fetchQuotesSnapshot();
+      if (latest && latest.length > 0) {
+        setQuotesMap((prev) => {
+          const next = { ...prev };
+          latest.forEach((q) => {
+            next[q.symbol] = q;
+          });
+          return next;
+        });
+      }
+      setLastUpdated(Date.now());
+    } catch (err) {
+      console.error('manual sync error:', err);
+    } finally {
+      setTimeout(() => setIsSyncing(false), 600);
+    }
   };
 
   const handleAddSymbol = async (symbol: string) => {
@@ -849,7 +865,14 @@ export const App: React.FC = () => {
       )}
 
       {chartQuote && (
-        <ChartDrawer quote={chartQuote} onClose={() => setChartQuote(null)} />
+        <ChartDrawer
+          quote={chartQuote}
+          onOpenOrder={(q, side) => {
+            setChartQuote(null);
+            setOrderState({ quote: q, side });
+          }}
+          onClose={() => setChartQuote(null)}
+        />
       )}
 
       {orderState && (

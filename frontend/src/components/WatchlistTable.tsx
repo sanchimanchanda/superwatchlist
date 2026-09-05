@@ -1,15 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import {
-  TrendingUp,
-  TrendingDown,
+  ArrowUpRight,
+  ArrowDownRight,
   Layers,
   BarChart2,
   Trash2,
-  AlertTriangle,
+  Sparkles,
   Zap,
-  ArrowUpRight,
-  ArrowDownRight,
-  Sparkles
+  AlertTriangle
 } from 'lucide-react';
 import { Quote } from '../types';
 import { Sparkline } from './Sparkline';
@@ -32,32 +30,34 @@ export const WatchlistTable: React.FC<WatchlistTableProps> = ({
 }) => {
   const [flashingSymbols, setFlashingSymbols] = useState<Record<string, 'up' | 'down'>>({});
 
-  // Detect tick direction changes for 60 FPS pulse flash
+  // Flash row or LTP on quote update
   useEffect(() => {
-    const flashMap: Record<string, 'up' | 'down'> = {};
+    if (!quotes || quotes.length === 0) return;
+    const newFlashes: Record<string, 'up' | 'down'> = {};
     quotes.forEach((q) => {
-      if (q.tickDirection === 1) flashMap[q.symbol] = 'up';
-      else if (q.tickDirection === -1) flashMap[q.symbol] = 'down';
+      if (q.tickDirection === 1) newFlashes[q.symbol] = 'up';
+      else if (q.tickDirection === -1) newFlashes[q.symbol] = 'down';
     });
 
-    setFlashingSymbols(flashMap);
+    setFlashingSymbols(newFlashes);
     const timer = setTimeout(() => setFlashingSymbols({}), 1200);
     return () => clearTimeout(timer);
   }, [quotes]);
 
-  if (quotes.length === 0) {
+  if (!quotes || quotes.length === 0) {
     return (
       <div style={{
-        textAlign: 'center',
-        padding: '60px 20px',
         background: 'var(--bg-card)',
-        borderRadius: 'var(--radius-lg)',
-        border: '1px solid var(--border-color)',
+        border: '1px dashed var(--border-color)',
+        borderRadius: 'var(--radius-md)',
+        padding: '60px 20px',
+        textAlign: 'center',
         color: 'var(--text-muted)'
       }}>
-        <Layers size={36} style={{ marginBottom: '12px', opacity: 0.6 }} />
-        <p style={{ fontSize: '15px', fontWeight: 500 }}>No stocks in this watchlist yet.</p>
-        <p style={{ fontSize: '13px', marginTop: '4px' }}>Search and add tickers to track live 1-minute market movements.</p>
+        <div style={{ fontSize: '15px', fontWeight: 600, marginBottom: '6px' }}>No securities in this view</div>
+        <p style={{ fontSize: '13px', maxWidth: '400px', margin: '0 auto' }}>
+          Use the global search bar above to find and add equities, or switch to another watchlist tab.
+        </p>
       </div>
     );
   }
@@ -66,8 +66,9 @@ export const WatchlistTable: React.FC<WatchlistTableProps> = ({
     <div style={{
       background: 'var(--bg-card)',
       border: '1px solid var(--border-color)',
-      borderRadius: 'var(--radius-lg)',
-      overflow: 'hidden'
+      borderRadius: 'var(--radius-md)',
+      overflow: 'hidden',
+      boxShadow: '0 4px 20px rgba(0,0,0,0.25)'
     }}>
       <div style={{ overflowX: 'auto' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
@@ -111,8 +112,12 @@ export const WatchlistTable: React.FC<WatchlistTableProps> = ({
                   onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--bg-hover)')}
                   onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
                 >
-                  {/* Symbol & Name */}
-                  <td style={{ padding: '14px 16px' }}>
+                  {/* Symbol & Name (Clickable to open chart) */}
+                  <td
+                    style={{ padding: '14px 16px', cursor: 'pointer' }}
+                    onClick={() => onOpenChart(q)}
+                    title="Click to view interactive chart"
+                  >
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -153,8 +158,12 @@ export const WatchlistTable: React.FC<WatchlistTableProps> = ({
                     </div>
                   </td>
 
-                  {/* Sparkline Canvas */}
-                  <td style={{ padding: '14px 16px', textAlign: 'center' }}>
+                  {/* Sparkline Canvas (Clickable to open chart) */}
+                  <td
+                    style={{ padding: '14px 16px', textAlign: 'center', cursor: 'pointer' }}
+                    onClick={() => onOpenChart(q)}
+                    title="Click to view interactive chart"
+                  >
                     <div style={{ display: 'inline-block' }}>
                       <Sparkline data={q.sparkline} isPositive={isUp} width={100} height={28} />
                     </div>
@@ -199,7 +208,11 @@ export const WatchlistTable: React.FC<WatchlistTableProps> = ({
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
                       {/* Buy Trigger */}
                       <button
-                        onClick={() => onOpenOrder(q, 'BUY')}
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onOpenOrder(q, 'BUY');
+                        }}
                         style={{
                           background: 'var(--color-green-bg)',
                           color: 'var(--color-green)',
@@ -216,7 +229,11 @@ export const WatchlistTable: React.FC<WatchlistTableProps> = ({
 
                       {/* Sell Trigger */}
                       <button
-                        onClick={() => onOpenOrder(q, 'SELL')}
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onOpenOrder(q, 'SELL');
+                        }}
                         style={{
                           background: 'var(--color-red-bg)',
                           color: 'var(--color-red)',
@@ -233,7 +250,11 @@ export const WatchlistTable: React.FC<WatchlistTableProps> = ({
 
                       {/* Depth Trigger */}
                       <button
-                        onClick={() => onOpenDepth(q)}
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onOpenDepth(q);
+                        }}
                         title="View L2 Market Depth"
                         style={{
                           background: 'var(--bg-secondary)',
@@ -251,7 +272,11 @@ export const WatchlistTable: React.FC<WatchlistTableProps> = ({
 
                       {/* Chart Trigger */}
                       <button
-                        onClick={() => onOpenChart(q)}
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onOpenChart(q);
+                        }}
                         title="View Candlestick Chart"
                         style={{
                           background: 'var(--bg-secondary)',
@@ -270,7 +295,11 @@ export const WatchlistTable: React.FC<WatchlistTableProps> = ({
                       {/* Remove from Watchlist */}
                       {onRemoveSymbol && (
                         <button
-                          onClick={() => onRemoveSymbol(q.symbol)}
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onRemoveSymbol(q.symbol);
+                          }}
                           title="Remove from Watchlist"
                           style={{
                             background: 'transparent',

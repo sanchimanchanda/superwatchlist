@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { RefreshCw, Radio, CheckCircle2, AlertCircle } from 'lucide-react';
+import { RefreshCw, Radio } from 'lucide-react';
 
 interface SyncStatusWidgetProps {
   lastUpdated: number;
@@ -77,25 +77,38 @@ export const SyncStatusWidget: React.FC<SyncStatusWidgetProps> = ({
 
       {onManualSync && (
         <button
-          onClick={onManualSync}
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onManualSync();
+          }}
           disabled={isSyncing}
           title="Force 1-Minute Live Refresh"
           style={{
-            background: 'var(--bg-hover)',
+            background: isSyncing ? 'var(--bg-secondary)' : 'var(--bg-hover)',
             border: '1px solid var(--border-color)',
-            color: 'var(--text-secondary)',
-            padding: '4px 8px',
+            color: isSyncing ? 'var(--color-amber)' : 'var(--text-primary)',
+            padding: '5px 12px',
             borderRadius: 'var(--radius-sm)',
             cursor: isSyncing ? 'not-allowed' : 'pointer',
-            display: 'flex',
+            display: 'inline-flex',
             alignItems: 'center',
-            gap: '4px',
+            gap: '6px',
             fontSize: '12px',
-            marginLeft: '4px'
+            fontWeight: 700,
+            marginLeft: '6px',
+            transition: 'all 0.15s ease',
+            boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+          }}
+          onMouseEnter={(e) => {
+            if (!isSyncing) e.currentTarget.style.borderColor = 'var(--color-green)';
+          }}
+          onMouseLeave={(e) => {
+            if (!isSyncing) e.currentTarget.style.borderColor = 'var(--border-color)';
           }}
         >
-          <RefreshCw size={12} className={isSyncing ? 'spin' : ''} />
-          <span>Sync Now</span>
+          <RefreshCw size={13} className={isSyncing ? 'spin' : ''} />
+          <span>{isSyncing ? 'Syncing...' : 'Sync Now'}</span>
         </button>
       )}
     </div>
