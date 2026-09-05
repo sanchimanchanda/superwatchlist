@@ -1,0 +1,47 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "SmartMarketWatchlistSchemas",
+  "definitions": {
+    "Quote": {
+      "type": "object",
+      "properties": {
+        "symbol": { "type": "string" },
+        "name": { "type": "string" },
+        "exchange": { "type": "string", "enum": ["NSE", "BSE", "NASDAQ"] },
+        "sector": { "type": "string" },
+        "ltp": { "type": "number" },
+        "open": { "type": "number" },
+        "high": { "type": "number" },
+        "low": { "type": "number" },
+        "prevClose": { "type": "number" },
+        "change": { "type": "number" },
+        "changePct": { "type": "number" },
+        "volume": { "type": "number" },
+        "vwap": { "type": "number" },
+        "week52High": { "type": "number" },
+        "week52Low": { "type": "number" },
+        "tickDirection": { "type": "integer", "enum": [-1, 0, 1] },
+        "isUpperCircuit": { "type": "boolean" },
+        "isLowerCircuit": { "type": "boolean" },
+        "sparkline": { "type": "array", "items": { "type": "number" } },
+        "lastUpdated": { "type": "number" },
+        "nextRefreshInSeconds": { "type": "number" }
+      },
+      "required": ["symbol", "name", "exchange", "ltp", "prevClose", "change", "changePct", "volume"]
+    },
+    "MeaningfulAnomaly": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "symbol": { "type": "string" },
+        "type": { "type": "string" },
+        "severity": { "type": "string", "enum": ["LOW", "MEDIUM", "HIGH", "CRITICAL"] },
+        "headline": { "type": "string" },
+        "description": { "type": "string" },
+        "attentionScore": { "type": "number" },
+        "timestamp": { "type": "number" }
+      },
+      "required": ["id", "symbol", "type", "severity", "headline", "attentionScore", "timestamp"]
+    }
+  }
+}

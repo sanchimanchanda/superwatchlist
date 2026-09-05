@@ -1,0 +1,161 @@
+:root {
+  --bg-primary: #0b0e14;
+  --bg-secondary: #121721;
+  --bg-card: #18202f;
+  --bg-hover: #202b3e;
+  --border-color: #263248;
+  --border-subtle: #1c2536;
+  
+  --text-primary: #f1f5f9;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  
+  --color-green: #00c087;
+  --color-green-bg: rgba(0, 192, 135, 0.12);
+  --color-red: #eb5b3c;
+  --color-red-bg: rgba(235, 91, 60, 0.12);
+  --color-blue: #387ed1;
+  --color-blue-bg: rgba(56, 126, 209, 0.12);
+  --color-amber: #f59e0b;
+  --color-amber-bg: rgba(245, 158, 11, 0.12);
+  --color-purple: #a855f7;
+  
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+  
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  line-height: 1.5;
+  overflow-x: hidden;
+}
+
+/* Tabular Numbers */
+.num-tabular {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+/* Pulse Flash Animations */
+@keyframes flashUptick {
+  0% { background-color: rgba(0, 192, 135, 0.35); }
+  100% { background-color: transparent; }
+}
+
+@keyframes flashDowntick {
+  0% { background-color: rgba(235, 91, 60, 0.35); }
+  100% { background-color: transparent; }
+}
+
+.flash-up {
+  animation: flashUptick 1.2s ease-out;
+}
+
+.flash-down {
+  animation: flashDowntick 1.2s ease-out;
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-primary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: var(--radius-sm);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+/* Utility Badges */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.badge-green {
+  background: var(--color-green-bg);
+  color: var(--color-green);
+  border: 1px solid rgba(0, 192, 135, 0.25);
+}
+
+.badge-red {
+  background: var(--color-red-bg);
+  color: var(--color-red);
+  border: 1px solid rgba(235, 91, 60, 0.25);
+}
+
+.badge-amber {
+  background: var(--color-amber-bg);
+  color: var(--color-amber);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+}
+
+.badge-blue {
+  background: var(--color-blue-bg);
+  color: var(--color-blue);
+  border: 1px solid rgba(56, 126, 209, 0.25);
+}
+
+.badge-purple {
+  background: rgba(168, 85, 247, 0.12);
+  color: var(--color-purple);
+  border: 1px solid rgba(168, 85, 247, 0.25);
+}
+
+/* Glassmorphism modal */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.modal-content {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+  max-width: 550px;
+  width: 90%;
+  max-height: 85vh;
+  overflow-y: auto;
+  position: relative;
+}

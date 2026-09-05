@@ -1,0 +1,108 @@
+version: '3.8'
+
+services:
+  # In-Memory Cache & Pub/Sub
+  redis:
+    image: redis:7-alpine
+    container_name: ronadhona-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - ronadhona-net
+
+  # PostgreSQL Relational Persistence
+  postgres:
+    image: postgres:16-alpine
+    container_name: ronadhona-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ronadhona_user
+      POSTGRES_PASSWORD: ronadhona_password
+      POSTGRES_DB: ronadhona_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./backend/db/init.sql:/docker-entrypoint-initdb.d/01-init.sql
+      - ./backend/db/seed.sql:/docker-entrypoint-initdb.d/02-seed.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ronadhona_user -d ronadhona_db"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - ronadhona-net
+
+  # Python 3.11 Google Finance Ingestion & Quant Anomaly Engine
+  analytics:
+    build:
+      context: .
+      dockerfile: backend/analytics/Dockerfile
+    container_name: ronadhona-analytics
+    restart: unless-stopped
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - PORT=8000
+    depends_on:
+      redis:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    networks:
+      - ronadhona-net
+
+  # Golang 1.22 Streaming Gateway & Trie Search REST API
+  gateway:
+    build:
+      context: .
+      dockerfile: backend/gateway/Dockerfile
+    container_name: ronadhona-gateway
+    restart: unless-stopped
+    environment:
+      - PORT=4000
+      - REDIS_URL=redis:6379
+    depends_on:
+      redis:
+        condition: service_healthy
+      analytics:
+        condition: service_healthy
+    ports:
+      - "4000:4000"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:4000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    networks:
+      - ronadhona-net
+
+  # React 18 + Vite Web Client served via Nginx Reverse Proxy
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    container_name: ronadhona-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    depends_on:
+      gateway:
+        condition: service_healthy
+    networks:
+      - ronadhona-net
+
+networks:
+  ronadhona-net:
+    driver: bridge
