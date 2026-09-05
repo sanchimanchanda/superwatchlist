@@ -5,9 +5,8 @@ WORKDIR /app
 
 RUN apk add --no-cache git
 
-COPY backend/gateway/go.mod ./
-# Note: if go.sum exists, it can be copied; otherwise go mod tidy / download
-COPY backend/gateway/ ./
+COPY go.mod ./
+COPY . ./
 
 RUN go mod tidy
 RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o /gateway .
