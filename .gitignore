@@ -34,3 +34,6 @@ AGENTS.md
 # Environment variables & secrets
 .env
 .env.local
+
+# Hackathon Submission Notes & Scripts
+explanation.md

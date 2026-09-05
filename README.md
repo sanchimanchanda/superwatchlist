@@ -11,7 +11,7 @@
 **Institutional-Grade Real-Time Market Watchlist, Attention Scoring & Paper Trading Engine**  
 *Built for the Code, by Groww (2026) Engineering Build Challenge*
 
-[🎯 100-Word Pitch](#-the-100-word-product-pitch) • [🏗️ Architecture](#️-system-architecture) • [✨ Features](#-core-features) • [🚀 Quickstart](#-quickstart--execution) • [🧪 Test Suite](#-automated-backend-test-suite) • [📑 Submission Guide](explanation.md)
+[🎯 100-Word Pitch](#-the-100-word-product-pitch) • [🏗️ Architecture](#️-system-architecture) • [✨ Features](#-core-features) • [🚀 Quickstart](#-quickstart--execution) • [🧪 Test Suite](#-automated-backend-test-suite)
 
 </div>
 
@@ -172,7 +172,6 @@ bash test_suite/run_tests.sh
 ├── .env.example                # Environment configuration template
 ├── .gitignore                  # Production Git ignore rules
 ├── README.md                   # Project overview & architectural guide
-├── explanation.md              # Deep-dive hackathon submission document & defense script
 ├── docker-compose.yml          # 5-container production deployment orchestration
 ├── api/                        # Shared type definitions & JSON schemas
 │   ├── types.ts
