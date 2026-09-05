@@ -1,4 +1,4 @@
-# Growly — Growly (Groww Code 2026 Hackathon)
+# Growly — Smart Market Watchlist & Intelligence Engine (Groww Code 2026)
 
 > **Institutional-Grade Real-Time Stock Watchlist & Market Attention Engine**  
 > Built for the *Code, by Groww (2026)* hackathon sprint by a Financial Markets Product Manager and Senior FinTech Full-Stack Architect (10+ years experience).
@@ -7,7 +7,7 @@
 
 ## 🎯 The 100-Word Product Pitch
 
-Traders don’t just need tables of stock prices—they need immediate signal over noise. **Smart Market Watchlist** transforms the traditional static watchlist into an institutional-grade **Market Intelligence & Attention Engine**. Powered by a resilient **1-minute Google Finance API ingestion pipeline**, it computes real-time **Composite Attention Scores (0–100)** to surface volume surges, circuit locks, and 52-week breakouts. When returning after time away, the **"Since You Were Away" Catch-Up Engine** diffs session states to provide instant, actionable insights. With a **60 FPS virtualized UI**, sub-2ms Trie search, and 1-click execution, it delivers the ultimate edge for modern traders.
+Traders don’t just need tables of stock prices—they need immediate signal over noise. **Growly** transforms the traditional static watchlist into an institutional-grade **Market Intelligence & Attention Engine**. Powered by a resilient **1-minute Google Finance API ingestion pipeline**, it computes real-time **Composite Attention Scores (0–100)** to surface volume surges, circuit locks, and 52-week breakouts. When returning after time away, the **"Since You Were Away" Catch-Up Engine** diffs session states to provide instant, actionable insights. With a **60 FPS virtualized UI**, sub-2ms Trie search, and 1-click execution, it delivers the ultimate edge for modern traders.
 
 ---
 

@@ -133,29 +133,29 @@ A change is defined as "meaningful" when market dynamics shift beyond routine ra
 │                           DOCKER COMPOSE TOPOLOGY                           │
 │                                                                             │
 │  ┌───────────────────────────────────────────────────────────────────────┐  │
-│  │                     CONTAINER: ronadhona-frontend                     │  │
+│  │                     CONTAINER: growly-frontend                     │  │
 │  │  - Multi-stage build (Node.js 20 Alpine -> Nginx 1.25 Alpine)         │  │
 │  │  - Serves compiled React 18 SPA (Vite + TypeScript)                   │  │
 │  │  - Nginx Reverse Proxy for /api and /ws (Port 3000 / 80)              │  │
 │  │  - Virtualized List, Canvas Sparklines, 1-Min Sync Countdown Widget   │  │
 │  └───────────────────────────────────┬───────────────────────────────────┘  │
-│                                      │ (Internal Bridge Network: ronadhona-net)
+│                                      │ (Internal Bridge Network: growly-net)
 │  ┌───────────────────────────────────▼───────────────────────────────────┐  │
-│  │                     CONTAINER: ronadhona-gateway (Golang)             │  │
+│  │                     CONTAINER: growly-gateway (Golang)             │  │
 │  │  - Low-latency WebSocket Server (Port 4000)                           │  │
 │  │  - In-Memory Trie Prefix Search (<2ms lookup)                         │  │
 │  │  - Watchlist CRUD REST API & Session Handlers                         │  │
 │  └───────────────────────────────────┬───────────────────────────────────┘  │
 │                                      │ (Redis Pub/Sub Tick Bus)             │
 │  ┌───────────────────────────────────▼───────────────────────────────────┐  │
-│  │                     CONTAINER: ronadhona-analytics (Python 3.11)      │  │
+│  │                     CONTAINER: growly-analytics (Python 3.11)      │  │
 │  │  - Google Finance API Ingestion Worker (1-Minute Refresh Cadence)     │  │
 │  │  - Quant Anomaly Engine (RVOL, VWAP, 52W Breakouts, Attention Score)  │  │
 │  │  - "Since You Were Away" Session Catch-Up Diff Engine                 │  │
 │  └───────────────────────────────────┬───────────────────────────────────┘  │
 │                                      │                                      │
 │  ┌───────────────────────────────────┴───────────────────────────────────┐  │
-│  │         DATA CONTAINERS: ronadhona-redis & ronadhona-postgres         │  │
+│  │         DATA CONTAINERS: growly-redis & growly-postgres         │  │
 │  │  - Redis 7: Sub-ms Quote Cache & Pub/Sub Channel                      │  │
 │  │  - PostgreSQL 16: User Watchlists (LexoRank) & Session Snapshots      │  │
 │  └───────────────────────────────────────────────────────────────────────┘  │

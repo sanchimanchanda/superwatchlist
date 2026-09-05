@@ -4,7 +4,7 @@ services:
   # In-Memory Cache & Pub/Sub
   redis:
     image: redis:7-alpine
-    container_name: ronadhona-redis
+    container_name: growly-redis
     restart: unless-stopped
     ports:
       - "6379:6379"
@@ -14,36 +14,36 @@ services:
       timeout: 3s
       retries: 5
     networks:
-      - ronadhona-net
+      - growly-net
 
   # PostgreSQL Relational Persistence
   postgres:
     image: postgres:16-alpine
-    container_name: ronadhona-postgres
+    container_name: growly-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_USER: ronadhona_user
-      POSTGRES_PASSWORD: ronadhona_password
-      POSTGRES_DB: ronadhona_db
+      POSTGRES_USER: growly_user
+      POSTGRES_PASSWORD: growly_password
+      POSTGRES_DB: growly_db
     ports:
       - "5432:5432"
     volumes:
       - ./backend/db/init.sql:/docker-entrypoint-initdb.d/01-init.sql
       - ./backend/db/seed.sql:/docker-entrypoint-initdb.d/02-seed.sql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ronadhona_user -d ronadhona_db"]
+      test: ["CMD-SHELL", "pg_isready -U growly_user -d growly_db"]
       interval: 5s
       timeout: 3s
       retries: 5
     networks:
-      - ronadhona-net
+      - growly-net
 
   # Python 3.11 Google Finance Ingestion & Quant Anomaly Engine
   analytics:
     build:
       context: .
       dockerfile: backend/analytics/Dockerfile
-    container_name: ronadhona-analytics
+    container_name: growly-analytics
     restart: unless-stopped
     environment:
       - REDIS_URL=redis://redis:6379
@@ -60,14 +60,14 @@ services:
       retries: 3
       start_period: 5s
     networks:
-      - ronadhona-net
+      - growly-net
 
   # Golang 1.22 Streaming Gateway & Trie Search REST API
   gateway:
     build:
       context: .
       dockerfile: backend/gateway/Dockerfile
-    container_name: ronadhona-gateway
+    container_name: growly-gateway
     restart: unless-stopped
     environment:
       - PORT=4000
@@ -86,14 +86,14 @@ services:
       retries: 3
       start_period: 5s
     networks:
-      - ronadhona-net
+      - growly-net
 
   # React 18 + Vite Web Client served via Nginx Reverse Proxy
   frontend:
     build:
       context: .
       dockerfile: frontend/Dockerfile
-    container_name: ronadhona-frontend
+    container_name: growly-frontend
     restart: unless-stopped
     ports:
       - "3000:80"
@@ -101,8 +101,8 @@ services:
       gateway:
         condition: service_healthy
     networks:
-      - ronadhona-net
+      - growly-net
 
 networks:
-  ronadhona-net:
+  growly-net:
     driver: bridge
