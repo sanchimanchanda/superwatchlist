@@ -437,20 +437,63 @@ export async function fetchCatchUpSummary(userId = 'default_user'): Promise<Catc
     if (res.ok) return await res.json();
   } catch (err) {}
 
+  // Compute real elapsed time from the stored session snapshot
+  const SESSION_KEY = 'smart_watchlist_last_session';
+  let previousSessionTime: number;
+  let timeAwayMinutes: number;
+
+  try {
+    const raw = localStorage.getItem(SESSION_KEY);
+    const snapshot = raw ? JSON.parse(raw) : null;
+    if (snapshot && snapshot.timestamp) {
+      previousSessionTime = snapshot.timestamp;
+      timeAwayMinutes = Math.round((Date.now() - previousSessionTime) / 60000);
+    } else {
+      // First-ever visit — treat as 0 minutes away
+      previousSessionTime = Date.now();
+      timeAwayMinutes = 0;
+    }
+  } catch {
+    previousSessionTime = Date.now() - 90 * 60 * 1000;
+    timeAwayMinutes = 90;
+  }
+
+  // Build a human-readable time label
+  const timeLabel =
+    timeAwayMinutes < 1
+      ? 'just now'
+      : timeAwayMinutes < 60
+      ? `${timeAwayMinutes}m ago`
+      : timeAwayMinutes < 1440
+      ? `${Math.floor(timeAwayMinutes / 60)}h ${timeAwayMinutes % 60}m ago`
+      : `${Math.floor(timeAwayMinutes / 1440)}d ago`;
+
+  // Pick movers from fallback quotes based on magnitude
+  const movers = FALLBACK_QUOTES.filter((q) => Math.abs(q.changePct) >= 1.5);
+  const gainers = movers.filter((q) => q.changePct > 0);
+  const losers = movers.filter((q) => q.changePct < 0);
+  const topMovers = [...gainers, ...losers].slice(0, 4);
+
+  const bulletPoints = topMovers.map((q) => {
+    const dir = q.changePct > 0 ? 'up' : 'down';
+    const sign = q.changePct > 0 ? '+' : '';
+    return `${q.symbol} moved ${dir} ${sign}${q.changePct.toFixed(2)}% — ${q.name}.`;
+  });
+
+  const headline =
+    timeAwayMinutes === 0
+      ? 'Welcome back — market data is live.'
+      : `Since you last checked (${timeLabel}): ${gainers.length} stocks gained >1.5%, ${losers.length} dropped.`;
+
   return {
     userId,
-    previousSessionTime: Date.now() - 90 * 60 * 1000,
-    timeAwayMinutes: 90,
-    headline: 'Since you last checked (1h 30m ago): 8 stocks gained >1.5%, 3 dropped.',
-    bulletPoints: [
-      'INFY surged +4.83% on strong quarterly revenue guidance.',
-      'RELIANCE hit a new session high (+1.45%).',
-      'ZOMATO locked in Upper Circuit limit (+10.16%).',
-      'ICICIBANK dropped -4.93% on profit booking.'
-    ],
-    totalMovedUp: 8,
-    totalMovedDown: 3,
-    highAttentionSymbols: ['INFY', 'ZOMATO', 'TCS'],
+    previousSessionTime,
+    timeAwayMinutes,
+    headline,
+    bulletPoints: bulletPoints.length > 0 ? bulletPoints : ['No significant moves since your last visit.'],
+    totalMovedUp: gainers.length,
+    totalMovedDown: losers.length,
+    highAttentionSymbols: gainers.slice(0, 3).map((q) => q.symbol),
     timestamp: Date.now()
   };
 }
