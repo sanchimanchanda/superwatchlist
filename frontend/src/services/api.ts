@@ -506,3 +506,29 @@ export async function triggerManualSync(): Promise<boolean> {
     return true;
   }
 }
+
+/**
+ * Persists the user's current price snapshot to the backend so that elapsed
+ * time can be computed accurately on the next visit.
+ */
+export async function saveSessionSnapshotToServer(quotes: Quote[], userId = 'default_user'): Promise<void> {
+  const payload = {
+    quotes: quotes.map((q) => ({ symbol: q.symbol, ltp: q.ltp, high: q.high, low: q.low })),
+    timestamp: Date.now()
+  };
+  // Save to localStorage as local fallback
+  try {
+    localStorage.setItem('smart_watchlist_last_session', JSON.stringify({
+      timestamp: payload.timestamp,
+      quotes: payload.quotes
+    }));
+  } catch {}
+  // Also persist to backend
+  try {
+    await fetch(`${API_BASE}/catchup?userId=${userId}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+  } catch {}
+}

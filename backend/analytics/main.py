@@ -73,6 +73,10 @@ anomaly_engine = AnomalyEngine()
 redis_client: Optional[aioredis.Redis] = None
 is_running_loop = False
 
+# In-memory per-user session snapshot store
+# Key: userId, Value: {timestamp_ms, quotes: [{symbol, last_seen_price, last_seen_timestamp}]}
+_user_session_store: Dict[str, dict] = {}
+
 async def get_redis():
     global redis_client
     if redis_client is None:
@@ -175,8 +179,37 @@ async def get_active_anomalies():
 @app.get("/api/v1/catchup")
 async def get_catchup_summary(userId: str = Query("default_user")):
     quotes = ingestor.get_all_quotes()
-    summary = SessionDiffEngine.generate_catchup_summary(user_id=userId, current_quotes=quotes)
+    # Retrieve stored session snapshot for this user
+    stored = _user_session_store.get(userId)
+    session_snapshots = stored.get("quotes") if stored else None
+    summary = SessionDiffEngine.generate_catchup_summary(
+        user_id=userId,
+        current_quotes=quotes,
+        session_snapshots=session_snapshots
+    )
     return summary
+
+
+class SessionSnapshotRequest(BaseModel):
+    quotes: List[dict]  # [{symbol, ltp, high, low}]
+    timestamp: Optional[int] = None
+
+
+@app.post("/api/v1/catchup")
+async def save_session_snapshot(req: SessionSnapshotRequest, userId: str = Query("default_user")):
+    """Called by the frontend on page-load to persist the user's last-seen prices."""
+    now = req.timestamp or int(time.time() * 1000)
+    snapshots = [
+        {
+            "symbol": q.get("symbol", ""),
+            "last_seen_price": q.get("ltp", 0),
+            "last_seen_timestamp": now
+        }
+        for q in req.quotes if q.get("symbol")
+    ]
+    _user_session_store[userId] = {"timestamp_ms": now, "quotes": snapshots}
+    logger.info(f"Session snapshot saved for {userId}: {len(snapshots)} symbols at t={now}")
+    return {"status": "saved", "userId": userId, "symbolCount": len(snapshots), "timestamp": now}
 
 # In-memory watchlists store for standalone dev mode
 mock_watchlists = {

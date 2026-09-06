@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   Search,
   Plus,
@@ -20,10 +20,10 @@ import {
   fetchCatchUpSummary,
   triggerManualSync,
   renameWatchlist,
-  deleteWatchlist
+  deleteWatchlist,
+  saveSessionSnapshotToServer
 } from './services/api';
 import { wsClient } from './services/websocket';
-import { saveSessionSnapshot } from './services/sessionTracker';
 import { SyncStatusWidget } from './components/SyncStatusWidget';
 import { CatchUpBanner } from './components/CatchUpBanner';
 import { WatchlistTable } from './components/WatchlistTable';
@@ -36,6 +36,8 @@ export const App: React.FC = () => {
   const [watchlists, setWatchlists] = useState<Watchlist[]>([]);
   const [activeTabId, setActiveTabId] = useState<string>('wl_nifty_core');
   const [quotesMap, setQuotesMap] = useState<Record<string, Quote>>({});
+  // Ref always holds the latest quotesMap so beforeunload never captures a stale closure
+  const quotesMapRef = useRef<Record<string, Quote>>({});
   const [lastUpdated, setLastUpdated] = useState<number>(Date.now());
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
   const [catchUpSummary, setCatchUpSummary] = useState<CatchUpSummary | null>(null);
@@ -242,6 +244,7 @@ export const App: React.FC = () => {
         map[q.symbol] = q;
       });
       setQuotesMap(map);
+      quotesMapRef.current = map; // seed ref immediately
       setCatchUpSummary(summary);
     }
 
@@ -264,9 +267,12 @@ export const App: React.FC = () => {
       setTimeout(() => setRecentAnomaly(null), 6000);
     });
 
-    // Save session snapshot on page blur/unload
+    // Save session snapshot on page close — use ref to avoid stale closure
     const handleUnload = () => {
-      saveSessionSnapshot(Object.values(quotesMap));
+      const liveQuotes = Object.values(quotesMapRef.current);
+      if (liveQuotes.length > 0) {
+        saveSessionSnapshotToServer(liveQuotes);
+      }
     };
     window.addEventListener('beforeunload', handleUnload);
 
@@ -357,6 +363,7 @@ export const App: React.FC = () => {
           latest.forEach((q) => {
             next[q.symbol] = q;
           });
+          quotesMapRef.current = next; // keep ref in sync
           return next;
         });
       }
