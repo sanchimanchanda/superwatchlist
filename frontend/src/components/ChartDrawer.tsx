@@ -21,8 +21,18 @@ export const ChartDrawer: React.FC<ChartDrawerProps> = ({ quote, onOpenOrder, on
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [selectedTimeframe, setSelectedTimeframe] = useState<'1M' | '5M' | '15M' | '1D'>('1M');
 
-  // Generate 24 realistic OHLCV candles
+  // Timeframe config: candle count & interval in minutes (1D uses day-offset labels)
+  const tfConfig: Record<'1M' | '5M' | '15M' | '1D', { count: number; intervalMin: number }> = {
+    '1M':  { count: 60, intervalMin: 1  },
+    '5M':  { count: 48, intervalMin: 5  },
+    '15M': { count: 24, intervalMin: 15 },
+    '1D':  { count: 30, intervalMin: 0  }, // 0 = use day labels
+  };
+
+  // Generate realistic OHLCV candles based on selected timeframe
   const candles: Candle[] = useMemo(() => {
+    const { count, intervalMin } = tfConfig[selectedTimeframe];
+
     const spark = quote.sparkline && quote.sparkline.length >= 2
       ? quote.sparkline
       : [
@@ -35,27 +45,38 @@ export const ChartDrawer: React.FC<ChartDrawerProps> = ({ quote, onOpenOrder, on
           quote.ltp
         ];
 
-    const count = 24;
     const generated: Candle[] = [];
     const highCap = quote.high || quote.ltp * 1.01;
     const lowCap = quote.low || quote.ltp * 0.99;
+
+    // Seed the noise differently per timeframe so charts look distinct
+    const tfSeed = selectedTimeframe === '1M' ? 1.0 : selectedTimeframe === '5M' ? 1.7 : selectedTimeframe === '15M' ? 2.3 : 3.1;
 
     for (let i = 0; i < count; i++) {
       const progress = i / (count - 1);
       const sparkIndex = Math.min(spark.length - 1, Math.floor(progress * (spark.length - 1)));
       const targetLtp = spark[sparkIndex];
-      
-      const noise = (Math.sin(i * 1.5) * 0.002 + (i % 3 === 0 ? 0.0015 : -0.0015)) * targetLtp;
+
+      const noise = (Math.sin(i * tfSeed) * 0.002 + (i % 3 === 0 ? 0.0015 : -0.0015)) * targetLtp;
       const openPrice: number = i === 0 ? (quote.open || targetLtp * 0.998) : generated[i - 1].close;
       const closePrice: number = i === count - 1 ? quote.ltp : Math.max(lowCap, Math.min(highCap, targetLtp + noise));
       const highPrice: number = Math.min(highCap, Math.max(openPrice, closePrice) + Math.abs(noise) * 0.8 + 0.5);
       const lowPrice: number = Math.max(lowCap, Math.min(openPrice, closePrice) - Math.abs(noise) * 0.8 - 0.5);
       const volume: number = Math.floor((quote.volume / count) * (0.6 + Math.random() * 0.8));
-      
-      const totalMinutes = 9 * 60 + 15 + i * 15;
-      const hours = Math.floor(totalMinutes / 60);
-      const mins = totalMinutes % 60;
-      const timeStr = `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
+
+      let timeStr: string;
+      if (selectedTimeframe === '1D') {
+        // Show last N trading days (approx)
+        const daysAgo = count - 1 - i;
+        const d = new Date();
+        d.setDate(d.getDate() - daysAgo);
+        timeStr = d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
+      } else {
+        const totalMinutes = 9 * 60 + 15 + i * intervalMin;
+        const hours = Math.floor(totalMinutes / 60);
+        const mins = totalMinutes % 60;
+        timeStr = `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
+      }
 
       generated.push({
         open: openPrice,
@@ -67,7 +88,8 @@ export const ChartDrawer: React.FC<ChartDrawerProps> = ({ quote, onOpenOrder, on
       });
     }
     return generated;
-  }, [quote]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [quote, selectedTimeframe]);
 
   // Render Canvas Candlestick Chart
   useEffect(() => {
@@ -161,7 +183,7 @@ export const ChartDrawer: React.FC<ChartDrawerProps> = ({ quote, onOpenOrder, on
     ctx.stroke();
     ctx.setLineDash([]); // Reset line dash
 
-  }, [candles, quote]);
+  }, [candles, quote, selectedTimeframe]);
 
   const isUp = quote.change >= 0;
 
