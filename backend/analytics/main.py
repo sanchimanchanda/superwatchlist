@@ -8,7 +8,7 @@ import json
 import logging
 import os
 import time
-from typing import List, Optional
+from typing import Dict, List, Optional
 from fastapi import FastAPI, BackgroundTasks, Query, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 import redis.asyncio as aioredis
@@ -102,8 +102,12 @@ async def market_ingestion_background_loop():
             # 1. Ingest 1-minute market batch
             quotes = await ingestor.fetch_realtime_batch()
             
-            # 2. Run quant anomaly engine
+            # 2. Run quant anomaly engine (includes sector divergence)
             anomalies = anomaly_engine.analyze_batch(quotes)
+
+            # 2a. Patch sector delta values back onto ingestor state
+            sector_deltas = anomaly_engine.get_sector_deltas(quotes)
+            ingestor.update_sector_deltas(sector_deltas)
             
             # Tick payload
             batch_payload = {
@@ -177,7 +181,10 @@ async def get_active_anomalies():
     return {"anomalies": anomalies, "timestamp": int(time.time() * 1000)}
 
 @app.get("/api/v1/catchup")
-async def get_catchup_summary(userId: str = Query("default_user")):
+async def get_catchup_summary(
+    userId: str = Query("default_user"),
+    lookbackMinutes: int = Query(90, ge=1, le=1440, description="Lookback window in minutes (15, 60, 240, 390)")
+):
     quotes = ingestor.get_all_quotes()
     # Retrieve stored session snapshot for this user
     stored = _user_session_store.get(userId)
@@ -185,7 +192,8 @@ async def get_catchup_summary(userId: str = Query("default_user")):
     summary = SessionDiffEngine.generate_catchup_summary(
         user_id=userId,
         current_quotes=quotes,
-        session_snapshots=session_snapshots
+        session_snapshots=session_snapshots,
+        lookback_minutes=lookbackMinutes
     )
     return summary
 

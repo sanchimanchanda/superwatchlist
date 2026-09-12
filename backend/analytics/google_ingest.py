@@ -1,13 +1,14 @@
 """
 Google Finance API Ingestion Worker
 Pulls real-time market data on a 1-minute cadence with Redis caching and rate-limiting fallbacks.
+Computes RSI-14 (Wilder smoothing) and 20-EMA on every quote using the sparkline ring buffer.
 """
 
 import asyncio
 import logging
 import random
 import time
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 import httpx
 import numpy as np
 
@@ -33,6 +34,69 @@ SEED_TICKERS = {
     "TSLA": {"name": "Tesla Inc", "exchange": "NASDAQ", "sector": "Automotive", "basePrice": 230.10, "prevClose": 220.00, "week52High": 271.00, "week52Low": 138.80, "marketCap": 780000000000}
 }
 
+# ── RSI / EMA helpers ─────────────────────────────────────────────────────────
+
+def compute_rsi14(prices: List[float]) -> Tuple[float, str]:
+    """
+    Computes RSI-14 using Wilder's smoothing method.
+    Returns (rsi_value, state) where state ∈ {OVERBOUGHT, OVERSOLD, NEUTRAL}.
+    Requires at least 15 price points; returns (50.0, NEUTRAL) on insufficient data.
+    """
+    if len(prices) < 15:
+        return 50.0, "NEUTRAL"
+
+    # Use last 15 prices for a 14-period RSI (14 differences)
+    recent = prices[-15:]
+    deltas = [recent[i] - recent[i - 1] for i in range(1, len(recent))]
+
+    gains = [max(d, 0.0) for d in deltas]
+    losses = [abs(min(d, 0.0)) for d in deltas]
+
+    # Wilder's initial average (simple average of first 14)
+    avg_gain = sum(gains) / 14.0
+    avg_loss = sum(losses) / 14.0
+
+    if avg_loss == 0.0:
+        rsi = 100.0
+    elif avg_gain == 0.0:
+        rsi = 0.0
+    else:
+        rs = avg_gain / avg_loss
+        rsi = 100.0 - (100.0 / (1.0 + rs))
+
+    rsi = round(rsi, 2)
+
+    if rsi >= 70.0:
+        state = "OVERBOUGHT"
+    elif rsi <= 30.0:
+        state = "OVERSOLD"
+    else:
+        state = "NEUTRAL"
+
+    return rsi, state
+
+
+def compute_ema20(prices: List[float], ltp: float) -> Tuple[float, str]:
+    """
+    Computes 20-period EMA over the price series.
+    Returns (ema_value, state) where state ∈ {ABOVE_EMA, BELOW_EMA}.
+    Falls back to SMA if fewer than 20 data points.
+    """
+    n = 20
+    if len(prices) < n:
+        ema = sum(prices) / len(prices)
+    else:
+        recent = prices[-n:]
+        k = 2.0 / (n + 1)
+        ema = recent[0]
+        for p in recent[1:]:
+            ema = p * k + ema * (1 - k)
+
+    ema = round(ema, 2)
+    state = "ABOVE_EMA" if ltp >= ema else "BELOW_EMA"
+    return ema, state
+
+
 class GoogleFinanceIngestor:
     def __init__(self):
         self.state: Dict[str, dict] = {}
@@ -56,6 +120,10 @@ class GoogleFinanceIngestor:
                 spark.append(round(cur, 2))
             spark[-1] = base
 
+            # Compute initial RSI-14 and 20-EMA from seed sparkline
+            rsi14, rsi_state = compute_rsi14(spark)
+            ema20, ema_state = compute_ema20(spark, base)
+
             self.state[symbol] = {
                 "symbol": symbol,
                 "name": info["name"],
@@ -78,6 +146,12 @@ class GoogleFinanceIngestor:
                 "isLowerCircuit": False,
                 "isStale": False,
                 "sparkline": spark,
+                # Quant indicators
+                "rsi14": rsi14,
+                "rsiState": rsi_state,
+                "ema20": ema20,
+                "emaState": ema_state,
+                "sectorDeltaVsMedian": 0.0,  # Populated by AnomalyEngine post-batch
                 "lastUpdated": now,
                 "nextRefreshInSeconds": self.refresh_interval
             }
@@ -86,6 +160,7 @@ class GoogleFinanceIngestor:
         """
         Fetches or simulates the 1-minute live quote update from Google Finance.
         Uses Geometric Brownian Motion with occasional Jump-Diffusion to model real volatility.
+        Computes RSI-14 and 20-EMA on each updated sparkline after the price step.
         """
         now = int(time.time() * 1000)
         self.last_fetch_time = now
@@ -141,8 +216,12 @@ class GoogleFinanceIngestor:
                 vol_step *= random.randint(3, 7) # Volume surge on jump
             volume = q["volume"] + vol_step
             
-            # Update sparkline
+            # Update sparkline ring buffer
             sparkline = q["sparkline"][1:] + [new_ltp]
+
+            # ── Compute RSI-14 and 20-EMA on updated sparkline ────────────────
+            rsi14, rsi_state = compute_rsi14(sparkline)
+            ema20, ema_state = compute_ema20(sparkline, new_ltp)
 
             quote = {
                 **q,
@@ -157,6 +236,12 @@ class GoogleFinanceIngestor:
                 "isUpperCircuit": is_uc,
                 "isLowerCircuit": is_lc,
                 "sparkline": sparkline,
+                # Updated quant indicators
+                "rsi14": rsi14,
+                "rsiState": rsi_state,
+                "ema20": ema20,
+                "emaState": ema_state,
+                # sectorDeltaVsMedian is computed externally by AnomalyEngine
                 "lastUpdated": now,
                 "nextRefreshInSeconds": self.refresh_interval
             }
@@ -171,3 +256,13 @@ class GoogleFinanceIngestor:
 
     def get_quote(self, symbol: str) -> Optional[dict]:
         return self.state.get(symbol)
+
+    def update_sector_deltas(self, sector_deltas: Dict[str, float]):
+        """
+        Called by AnomalyEngine after sector divergence analysis.
+        Patches sectorDeltaVsMedian onto in-memory state so the field is
+        present on subsequent get_all_quotes() calls.
+        """
+        for symbol, delta in sector_deltas.items():
+            if symbol in self.state:
+                self.state[symbol]["sectorDeltaVsMedian"] = delta

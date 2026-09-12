@@ -431,9 +431,9 @@ export async function fetchQuotesSnapshot(): Promise<Quote[]> {
   return FALLBACK_QUOTES;
 }
 
-export async function fetchCatchUpSummary(userId = 'default_user'): Promise<CatchUpSummary | null> {
+export async function fetchCatchUpSummary(userId = 'default_user', lookbackMinutes = 90): Promise<CatchUpSummary | null> {
   try {
-    const res = await fetch(`${API_BASE}/catchup?userId=${userId}`);
+    const res = await fetch(`${API_BASE}/catchup?userId=${userId}&lookbackMinutes=${lookbackMinutes}`);
     if (res.ok) return await res.json();
   } catch (err) {}
 

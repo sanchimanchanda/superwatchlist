@@ -5,6 +5,9 @@
 
 export type Exchange = 'NSE' | 'BSE' | 'NASDAQ';
 
+export type RSIState = 'OVERBOUGHT' | 'OVERSOLD' | 'NEUTRAL';
+export type EMAState = 'ABOVE_EMA' | 'BELOW_EMA';
+
 export interface Ticker {
   symbol: string;
   name: string;
@@ -38,6 +41,14 @@ export interface Quote {
   isLowerCircuit: boolean;
   isStale?: boolean;
   sparkline: number[]; // 20-30 intraday normalized points
+
+  // ── Quant Indicators (computed by analytics engine) ──────────────────────
+  rsi14?: number;                  // RSI-14 value (0–100) via Wilder smoothing
+  rsiState?: RSIState;             // OVERBOUGHT ≥ 70 | OVERSOLD ≤ 30 | NEUTRAL
+  ema20?: number;                  // 20-period EMA over sparkline
+  emaState?: EMAState;             // ABOVE_EMA | BELOW_EMA relative to current LTP
+  sectorDeltaVsMedian?: number;    // changePct delta vs sector median (+ = outperforming)
+
   lastUpdated: number; // Unix timestamp ms
   nextRefreshInSeconds: number;
 }
@@ -66,7 +77,10 @@ export type AnomalyType =
   | '52W_LOW_BREAKDOWN'
   | 'CIRCUIT_LOCK_UC'
   | 'CIRCUIT_LOCK_LC'
-  | 'VWAP_CROSS';
+  | 'VWAP_CROSS'
+  | 'DEAD_CAT_BOUNCE'   // Post-drop bounce on weak RVOL — likely to fail
+  | 'BULL_TRAP'          // Price reclaims prior high on low volume + low RSI
+  | 'SECTOR_DIVERGENCE'; // Stock diverging ≥3% from its sector median changePct
 
 export type AnomalySeverity = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
 
@@ -80,6 +94,8 @@ export interface MeaningfulAnomaly {
   attentionScore: number; // 0 - 100
   deltaPct?: number;
   rvol?: number;
+  rsi14?: number;               // Included for DCB/BullTrap signals
+  sectorMedianPct?: number;     // Included for SECTOR_DIVERGENCE signals
   timestamp: number;
 }
 
@@ -110,10 +126,13 @@ export interface SessionSnapshot {
   seenLow: number;
 }
 
+export type CatchUpLookback = 15 | 60 | 90 | 240 | 390; // 15m | 1h | 90m default | 4h | Full Day
+
 export interface CatchUpSummary {
   userId: string;
   previousSessionTime: number;
   timeAwayMinutes: number;
+  lookbackMinutes?: number;     // Which window was used for the diff
   headline: string;
   bulletPoints: string[];
   totalMovedUp: number;

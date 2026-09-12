@@ -9,7 +9,7 @@ import {
   Wallet,
   Briefcase
 } from 'lucide-react';
-import { Quote, Watchlist, SearchResult, CatchUpSummary, MeaningfulAnomaly, Position, ExecutedOrder } from './types';
+import { Quote, Watchlist, SearchResult, CatchUpSummary, MeaningfulAnomaly, Position, ExecutedOrder, CatchUpLookback } from './types';
 import {
   fetchWatchlists,
   createWatchlist,
@@ -227,13 +227,23 @@ export const App: React.FC = () => {
   // Live anomaly alerts
   const [recentAnomaly, setRecentAnomaly] = useState<MeaningfulAnomaly | null>(null);
 
+  // "Since You Left" configurable lookback — persisted to localStorage
+  const [catchupLookback, setCatchupLookback] = useState<CatchUpLookback>(() => {
+    try {
+      const stored = parseInt(localStorage.getItem('growly_catchup_lookback') || '90', 10);
+      return ([15, 60, 240, 390].includes(stored) ? stored : 90) as CatchUpLookback;
+    } catch {
+      return 90;
+    }
+  });
+
   // 1. Initial Data Fetch & WebSocket Setup
   useEffect(() => {
     async function init() {
       const [lists, quotes, summary] = await Promise.all([
         fetchWatchlists(),
         fetchQuotesSnapshot(),
-        fetchCatchUpSummary()
+        fetchCatchUpSummary('default_user', catchupLookback)
       ]);
 
       setWatchlists(lists);
@@ -448,6 +458,13 @@ export const App: React.FC = () => {
       setIsNewWatchlistModal(false);
       setNewWatchlistTitle('');
     }
+  };
+
+  const handleLookbackChange = async (minutes: CatchUpLookback) => {
+    setCatchupLookback(minutes);
+    try { localStorage.setItem('growly_catchup_lookback', String(minutes)); } catch {}
+    const updated = await fetchCatchUpSummary('default_user', minutes);
+    if (updated) setCatchUpSummary(updated);
   };
 
   return (
@@ -688,6 +705,8 @@ export const App: React.FC = () => {
         summary={catchUpSummary}
         onFilterChangedOnly={() => setIsFilterActiveMovers(!isFilterActiveMovers)}
         isFilterActive={isFilterActiveMovers}
+        lookback={catchupLookback}
+        onLookbackChange={handleLookbackChange}
       />
 
       {/* Multi-Watchlist Tab Bar */}

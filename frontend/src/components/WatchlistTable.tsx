@@ -7,7 +7,9 @@ import {
   Trash2,
   Sparkles,
   Zap,
-  AlertTriangle
+  AlertTriangle,
+  TrendingUp,
+  TrendingDown
 } from 'lucide-react';
 import { Quote } from '../types';
 import { Sparkline } from './Sparkline';
@@ -101,6 +103,18 @@ export const WatchlistTable: React.FC<WatchlistTableProps> = ({
               const isCircuit = q.isUpperCircuit || q.isLowerCircuit;
               const isHighMomentum = Math.abs(q.changePct) >= 2.0;
 
+              // RSI-14 badge
+              const isOverbought = q.rsiState === 'OVERBOUGHT';
+              const isOversold   = q.rsiState === 'OVERSOLD';
+
+              // 20-EMA badge
+              const isAboveEma = q.emaState === 'ABOVE_EMA';
+              const isBelowEma = q.emaState === 'BELOW_EMA';
+
+              // Sector divergence badge (show when |delta| >= 1% for visibility)
+              const sectorDelta = q.sectorDeltaVsMedian ?? 0;
+              const hasSectorDivergence = Math.abs(sectorDelta) >= 1.0;
+
               return (
                 <tr
                   key={q.symbol}
@@ -192,7 +206,116 @@ export const WatchlistTable: React.FC<WatchlistTableProps> = ({
                           <Zap size={11} /> Momentum
                         </span>
                       )}
-                      {!isNear52WHigh && !isCircuit && !isHighMomentum && (
+                      {/* RSI-14 badges */}
+                      {isOverbought && (
+                        <span
+                          className="badge"
+                          title={`RSI-14: ${q.rsi14?.toFixed(1)} — Overbought`}
+                          style={{
+                            background: 'rgba(235, 91, 60, 0.15)',
+                            color: 'var(--color-red)',
+                            border: '1px solid rgba(235, 91, 60, 0.3)',
+                            fontSize: '10px',
+                            padding: '2px 6px',
+                            borderRadius: '4px',
+                            fontWeight: 600,
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '3px'
+                          }}
+                        >
+                          RSI {q.rsi14?.toFixed(0)} OB
+                        </span>
+                      )}
+                      {isOversold && (
+                        <span
+                          className="badge"
+                          title={`RSI-14: ${q.rsi14?.toFixed(1)} — Oversold`}
+                          style={{
+                            background: 'rgba(0, 192, 135, 0.15)',
+                            color: 'var(--color-green)',
+                            border: '1px solid rgba(0, 192, 135, 0.3)',
+                            fontSize: '10px',
+                            padding: '2px 6px',
+                            borderRadius: '4px',
+                            fontWeight: 600,
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '3px'
+                          }}
+                        >
+                          RSI {q.rsi14?.toFixed(0)} OS
+                        </span>
+                      )}
+                      {/* 20-EMA badge */}
+                      {isAboveEma && (
+                        <span
+                          title={`Price above 20-EMA (₹${q.ema20?.toFixed(2)})`}
+                          style={{
+                            background: 'rgba(0, 192, 135, 0.1)',
+                            color: 'var(--color-green)',
+                            border: '1px solid rgba(0, 192, 135, 0.2)',
+                            fontSize: '10px',
+                            padding: '2px 6px',
+                            borderRadius: '4px',
+                            fontWeight: 600,
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '3px'
+                          }}
+                        >
+                          <TrendingUp size={10} /> EMA20
+                        </span>
+                      )}
+                      {isBelowEma && (
+                        <span
+                          title={`Price below 20-EMA (₹${q.ema20?.toFixed(2)})`}
+                          style={{
+                            background: 'rgba(235, 91, 60, 0.1)',
+                            color: 'var(--color-red)',
+                            border: '1px solid rgba(235, 91, 60, 0.2)',
+                            fontSize: '10px',
+                            padding: '2px 6px',
+                            borderRadius: '4px',
+                            fontWeight: 600,
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '3px'
+                          }}
+                        >
+                          <TrendingDown size={10} /> EMA20
+                        </span>
+                      )}
+                      {/* Sector divergence badge */}
+                      {hasSectorDivergence && (
+                        <span
+                          title={`${sectorDelta > 0 ? 'Outperforming' : 'Underperforming'} ${q.sector} sector by ${Math.abs(sectorDelta).toFixed(1)}%`}
+                          style={{
+                            background: sectorDelta > 0
+                              ? 'rgba(0, 192, 135, 0.1)'
+                              : 'rgba(235, 91, 60, 0.1)',
+                            color: sectorDelta > 0
+                              ? 'var(--color-green)'
+                              : 'var(--color-red)',
+                            border: `1px solid ${
+                              sectorDelta > 0
+                                ? 'rgba(0, 192, 135, 0.2)'
+                                : 'rgba(235, 91, 60, 0.2)'
+                            }`,
+                            fontSize: '10px',
+                            padding: '2px 6px',
+                            borderRadius: '4px',
+                            fontWeight: 600,
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '2px',
+                            whiteSpace: 'nowrap'
+                          }}
+                        >
+                          {sectorDelta > 0 ? '+' : ''}{sectorDelta.toFixed(1)}% vs Sector
+                        </span>
+                      )}
+                      {!isNear52WHigh && !isCircuit && !isHighMomentum && !isOverbought && !isOversold && !hasSectorDivergence && (
                         <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Steady</span>
                       )}
                     </div>

@@ -24,6 +24,11 @@
         "isUpperCircuit": { "type": "boolean" },
         "isLowerCircuit": { "type": "boolean" },
         "sparkline": { "type": "array", "items": { "type": "number" } },
+        "rsi14": { "type": "number", "minimum": 0, "maximum": 100, "description": "RSI-14 via Wilder smoothing" },
+        "rsiState": { "type": "string", "enum": ["OVERBOUGHT", "OVERSOLD", "NEUTRAL"], "description": "RSI state classification" },
+        "ema20": { "type": "number", "description": "20-period EMA over sparkline prices" },
+        "emaState": { "type": "string", "enum": ["ABOVE_EMA", "BELOW_EMA"], "description": "LTP position relative to 20-EMA" },
+        "sectorDeltaVsMedian": { "type": "number", "description": "changePct minus sector median changePct" },
         "lastUpdated": { "type": "number" },
         "nextRefreshInSeconds": { "type": "number" }
       },
@@ -34,11 +39,29 @@
       "properties": {
         "id": { "type": "string" },
         "symbol": { "type": "string" },
-        "type": { "type": "string" },
+        "type": {
+          "type": "string",
+          "enum": [
+            "SESSION_DELTA",
+            "VOLUME_SURGE",
+            "52W_HIGH_BREAKOUT",
+            "52W_LOW_BREAKDOWN",
+            "CIRCUIT_LOCK_UC",
+            "CIRCUIT_LOCK_LC",
+            "VWAP_CROSS",
+            "DEAD_CAT_BOUNCE",
+            "BULL_TRAP",
+            "SECTOR_DIVERGENCE"
+          ]
+        },
         "severity": { "type": "string", "enum": ["LOW", "MEDIUM", "HIGH", "CRITICAL"] },
         "headline": { "type": "string" },
         "description": { "type": "string" },
         "attentionScore": { "type": "number" },
+        "deltaPct": { "type": "number" },
+        "rvol": { "type": "number" },
+        "rsi14": { "type": "number" },
+        "sectorMedianPct": { "type": "number" },
         "timestamp": { "type": "number" }
       },
       "required": ["id", "symbol", "type", "severity", "headline", "attentionScore", "timestamp"]

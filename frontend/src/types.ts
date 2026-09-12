@@ -1,5 +1,9 @@
 export type Exchange = 'NSE' | 'BSE' | 'NASDAQ';
 
+export type RSIState = 'OVERBOUGHT' | 'OVERSOLD' | 'NEUTRAL';
+export type EMAState = 'ABOVE_EMA' | 'BELOW_EMA';
+export type CatchUpLookback = 15 | 60 | 90 | 240 | 390;
+
 export interface Quote {
   symbol: string;
   name: string;
@@ -22,6 +26,14 @@ export interface Quote {
   isLowerCircuit: boolean;
   isStale?: boolean;
   sparkline: number[];
+
+  // ── Quant Indicators ──────────────────────────────────────────────────────
+  rsi14?: number;                  // RSI-14 via Wilder smoothing (0–100)
+  rsiState?: RSIState;             // OVERBOUGHT | OVERSOLD | NEUTRAL
+  ema20?: number;                  // 20-period EMA over sparkline
+  emaState?: EMAState;             // ABOVE_EMA | BELOW_EMA
+  sectorDeltaVsMedian?: number;    // changePct minus sector median (+ = outperforming)
+
   lastUpdated: number;
   nextRefreshInSeconds: number;
 }
@@ -62,6 +74,8 @@ export interface MeaningfulAnomaly {
   attentionScore: number;
   deltaPct?: number;
   rvol?: number;
+  rsi14?: number;
+  sectorMedianPct?: number;
   timestamp: number;
 }
 
@@ -69,6 +83,7 @@ export interface CatchUpSummary {
   userId: string;
   previousSessionTime: number;
   timeAwayMinutes: number;
+  lookbackMinutes?: number;
   headline: string;
   bulletPoints: string[];
   totalMovedUp: number;
